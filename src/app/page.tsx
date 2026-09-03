@@ -1,101 +1,172 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  GraduationCap,
+  ShieldCheck,
+  User,
+  ArrowRight,
+  Info,
+} from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { success, error } = useToast();
+  const [role, setRole] = useState<'admin' | 'student'>('admin');
+  const [identifier, setIdentifier] = useState('admin@department.edu');
+  const [password, setPassword] = useState('admin123');
+  const [loading, setLoading] = useState(false);
+
+  const handleRoleToggle = (newRole: 'admin' | 'student') => {
+    setRole(newRole);
+    if (newRole === 'admin') {
+      setIdentifier('admin@department.edu');
+      setPassword('admin123');
+    } else {
+      setIdentifier('');
+      setPassword('');
+    }
+  };
+
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password, role }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        success(`Welcome, ${data.student?.name || data.user.username}!`);
+        if (data.role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/student');
+        }
+      } else {
+        error(data.error || 'Invalid credentials');
+      }
+    } catch {
+      error('An error occurred during authentication. Please check server and database connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
+      {/* College Institutional Logo Header */}
+      <div className="max-w-md w-full text-center mb-6 space-y-3">
+        <div className="flex items-center justify-center">
+          <img
+            src="/logo-mic.png"
+            alt="DVR & Dr. HS MIC College of Technology"
+            className="h-16 sm:h-20 w-auto object-contain drop-shadow-xs"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+            }}
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div>
+          <h2 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
+            Department of Artificial Intelligence &amp; Machine Learning (AIML)
+          </h2>
+          <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">
+            Student Task Tracking &amp; Department Management Portal
+          </p>
+        </div>
+      </div>
+
+      {/* Main Login Card */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-md w-full p-6 sm:p-8 space-y-6">
+        {/* Role Tab Selector */}
+        <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => handleRoleToggle('admin')}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              role === 'admin'
+                ? 'bg-white text-blue-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-blue-600" />
+            <span>Admin / Faculty</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleRoleToggle('student')}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              role === 'student'
+                ? 'bg-white text-emerald-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <User className="w-4 h-4 text-emerald-600" />
+            <span>Student Portal</span>
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              {role === 'admin' ? 'Admin Email / Username' : 'Student Roll Number'}
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder={role === 'admin' ? 'admin@department.edu' : 'e.g. 24H71A6101'}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-3 rounded-xl font-bold text-sm text-white transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+              role === 'admin'
+                ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-500/20'
+                : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-500/20'
+            }`}
+          >
+            <span>{loading ? 'Authenticating...' : `Sign In as ${role === 'admin' ? 'Admin' : 'Student'}`}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </form>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-8 text-center text-xs text-slate-500">
+        <span className="font-bold text-slate-700">DVR & Dr. HS MIC College of Technology</span> • AIML Department
+      </div>
     </div>
   );
 }
