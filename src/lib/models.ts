@@ -47,6 +47,8 @@ const StudentSchema = new Schema<IStudent>({
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
 });
+StudentSchema.index({ status: 1, year: 1, section: 1 });
+StudentSchema.index({ status: 1, roll_number: 1 });
 
 // Task Schema
 export interface ITask extends Document {
@@ -88,6 +90,7 @@ const TaskSchema = new Schema<ITask>({
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
 });
+TaskSchema.index({ status: 1, deadline: 1 });
 
 // TaskAssignment Schema
 export interface ITaskAssignment extends Document {
@@ -106,6 +109,8 @@ const TaskAssignmentSchema = new Schema<ITaskAssignment>({
   completed_at: { type: Date, default: null },
 });
 TaskAssignmentSchema.index({ task_id: 1, student_id: 1 }, { unique: true });
+TaskAssignmentSchema.index({ task_id: 1, status: 1 });
+TaskAssignmentSchema.index({ student_id: 1, status: 1 });
 
 // Submission Schema
 export interface ISubmission extends Document {

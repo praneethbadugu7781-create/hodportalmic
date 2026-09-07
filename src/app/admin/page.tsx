@@ -23,6 +23,8 @@ export default function AdminDashboardPage() {
 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState<AdminTab>('dashboard');
 
   // Tasks & Metrics State
@@ -51,30 +53,36 @@ export default function AdminDashboardPage() {
       }
 
       setUser(meData.user);
-      await Promise.all([fetchTasks(), fetchStats()]);
+      setLoading(false);
+      // Fetch tasks and stats in parallel without blocking UI
+      fetchTasks();
+      fetchStats();
     } catch {
       router.push('/');
-    } finally {
       setLoading(false);
     }
   };
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (showToast = false) => {
+    setTasksLoading(true);
     try {
       const res = await fetch('/api/tasks');
       const data = await res.json();
       if (res.ok) {
         setTasks(data.tasks || []);
-        if (data.tasks?.length > 0 && !selectedTaskId) {
-          setSelectedTaskId(data.tasks[0].id);
+        if (data.tasks?.length > 0) {
+          setSelectedTaskId((prev) => (prev ? prev : data.tasks[0].id));
         }
       }
     } catch {
-      error('Failed to load tasks');
+      if (showToast) error('Failed to load tasks');
+    } finally {
+      setTasksLoading(false);
     }
   };
 
   const fetchStats = async () => {
+    setStatsLoading(true);
     try {
       const res = await fetch('/api/analytics');
       const data = await res.json();
@@ -83,6 +91,8 @@ export default function AdminDashboardPage() {
       }
     } catch {
       // ignore
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -140,6 +150,7 @@ export default function AdminDashboardPage() {
             totalActiveTasks={stats?.totalActiveTasks || tasks.length}
             totalOverdue={stats?.totalOverdue || 0}
             overallRate={stats?.overallCompletionRate || 0}
+            loading={statsLoading && !stats}
             onCardClick={handleKpiCardClick}
           />
 
@@ -148,6 +159,7 @@ export default function AdminDashboardPage() {
             <div className="space-y-6">
               <TaskTracker
                 tasks={tasks}
+                tasksLoading={tasksLoading && tasks.length === 0}
                 selectedTaskId={selectedTaskId}
                 onSelectTask={(id) => setSelectedTaskId(id)}
                 onOpenStudentProfile={(id) => setActiveProfileStudentId(id)}

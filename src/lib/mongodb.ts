@@ -10,19 +10,20 @@ const DEFAULT_URI = 'mongodb+srv://praneethbadugu30_db_user:5Xp6jLldoU8EAT1d@clu
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
+  adminEnsured?: boolean;
 }
 
 declare global {
   var mongooseCache: MongooseCache | undefined;
 }
 
-let cached: MongooseCache = global.mongooseCache || { conn: null, promise: null };
+let cached: MongooseCache = global.mongooseCache || { conn: null, promise: null, adminEnsured: false };
 if (!global.mongooseCache) {
   global.mongooseCache = cached;
 }
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
-  if (cached.conn) {
+  if (cached.conn && cached.conn.connection.readyState === 1) {
     return cached.conn;
   }
 
@@ -38,12 +39,17 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 10000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 20000,
     };
 
     cached.promise = mongoose.connect(uri, opts).then(async (m) => {
-      console.log('Connected to MongoDB database');
-      await ensureAdminExists(m);
+      if (!cached.adminEnsured) {
+        ensureAdminExists(m).catch((e) => console.error('Admin init check error:', e.message));
+        cached.adminEnsured = true;
+      }
       return m;
     }).catch((err) => {
       console.error('MongoDB connection error:', err.message);
@@ -65,7 +71,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 async function ensureAdminExists(m: typeof mongoose) {
   try {
     const UserModel = m.models.User || (await import('./models')).User;
-    const existingAdmin = await UserModel.findOne({ role: 'admin' });
+    const existingAdmin = await UserModel.findOne({ role: 'admin' }).select('_id').lean();
     if (!existingAdmin) {
       console.log('Creating initial Department Admin account...');
       const password_hash = await bcrypt.hash('admin123', 10);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase, logAdminAction } from '@/lib/mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Student, User, Task, TaskAssignment, Submission, AcademicHistory } from '@/lib/models';
+import { invalidateCache } from '@/lib/cache';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -30,23 +31,29 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    // Fetch assignments with task info and submissions
-    const rawAssignments = await TaskAssignment.find({ student_id: studentId })
-      .populate('task_id')
-      .lean();
+    // Fetch assignments with task info, submissions, and academic history in parallel
+    const [rawAssignments, submissions, rawHistory] = await Promise.all([
+      TaskAssignment.find({ student_id: studentId })
+        .populate('task_id')
+        .lean(),
+      Submission.find({ student_id: studentId }).lean(),
+      AcademicHistory.find({ student_id: studentId })
+        .sort({ promoted_at: -1 })
+        .lean(),
+    ]);
 
-    const submissions = await Submission.find({ student_id: studentId }).lean();
+    const subMap = new Map(submissions.map((s) => [s.task_id?.toString(), s]));
 
     const assignments = rawAssignments.map((a: any) => {
       const task = a.task_id;
-      const sub = submissions.find((s) => s.task_id?.toString() === task?._id?.toString());
+      const sub = task?._id ? subMap.get(task._id.toString()) : null;
 
       return {
         assignment_id: a._id.toString(),
         assignment_status: a.status,
         assigned_at: a.assigned_at,
         completed_at: a.completed_at,
-        task_id: task?._id.toString(),
+        task_id: task?._id?.toString(),
         task_title: task?.title || 'Unknown Task',
         task_description: task?.description || '',
         task_type: task?.type,
@@ -61,11 +68,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         submission_submitted_at: sub?.submitted_at || null,
       };
     });
-
-    // Fetch academic history
-    const rawHistory = await AcademicHistory.find({ student_id: studentId })
-      .sort({ promoted_at: -1 })
-      .lean();
 
     const history = rawHistory.map((h) => ({
       ...h,
@@ -138,6 +140,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     await logAdminAction(user.id, 'EDIT_STUDENT', `Updated details for ${existing.roll_number} (${existing.name})`);
 
+    invalidateCache('students_');
+    invalidateCache('analytics');
+
     return NextResponse.json({ success: true, message: 'Student updated successfully' });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to update student' }, { status: 500 });
@@ -168,6 +173,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await student.save();
 
     await logAdminAction(user.id, 'DISABLE_STUDENT', `Disabled student account for ${student.roll_number} (${student.name})`);
+
+    invalidateCache('students_');
+    invalidateCache('analytics');
 
     return NextResponse.json({ success: true, message: 'Student account has been disabled' });
   } catch (error: any) {

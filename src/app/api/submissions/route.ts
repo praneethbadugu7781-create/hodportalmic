@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase, logAdminAction } from '@/lib/mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Task, TaskAssignment, Submission } from '@/lib/models';
+import { invalidateCache } from '@/lib/cache';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -76,6 +77,11 @@ export async function POST(req: NextRequest) {
     assignment.status = newStatus as 'PENDING' | 'COMPLETED' | 'OVERDUE';
     assignment.completed_at = newStatus === 'COMPLETED' ? new Date() : null;
     await assignment.save();
+
+    invalidateCache('task_detail_');
+    invalidateCache('admin_tasks');
+    invalidateCache('analytics');
+    invalidateCache('students_');
 
     return NextResponse.json({
       success: true,

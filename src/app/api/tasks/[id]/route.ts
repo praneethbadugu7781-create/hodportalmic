@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase, logAdminAction } from '@/lib/mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Task, Student, TaskAssignment, Submission } from '@/lib/models';
+import { getCached, setCached, invalidateCache } from '@/lib/cache';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -13,31 +14,37 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectToDatabase();
-
     const taskId = params.id;
     if (!mongoose.Types.ObjectId.isValid(taskId)) {
       return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
     }
+
+    const { searchParams } = new URL(req.url);
+    const forceRefresh = searchParams.get('refresh') === 'true';
+
+    // Fast cache for admin view
+    const cacheKey = `task_detail_${taskId}`;
+    if (user?.role === 'admin' && !forceRefresh) {
+      const cached = getCached<any>(cacheKey);
+      if (cached) {
+        return NextResponse.json(cached);
+      }
+    }
+
+    await connectToDatabase();
 
     const task = await Task.findById(taskId).lean();
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    // Auto-update overdue assignments
-    if (new Date() > new Date(task.deadline)) {
-      await TaskAssignment.updateMany(
-        { task_id: taskId, status: 'PENDING' },
-        { status: 'OVERDUE' }
-      );
-    }
-
     // If student, return their individual assignment info
     if (user?.role === 'student' && student) {
       const studentObjId = new mongoose.Types.ObjectId(student.id);
-      const assignment = await TaskAssignment.findOne({ task_id: taskId, student_id: studentObjId }).lean();
-      const submission = await Submission.findOne({ task_id: taskId, student_id: studentObjId }).lean();
+      const [assignment, submission] = await Promise.all([
+        TaskAssignment.findOne({ task_id: taskId, student_id: studentObjId }).lean(),
+        Submission.findOne({ task_id: taskId, student_id: studentObjId }).lean(),
+      ]);
 
       return NextResponse.json({
         task: { ...task, id: (task as any)._id.toString() },
@@ -54,12 +61,24 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       });
     }
 
-    // Admin view
-    const assignments = await TaskAssignment.find({ task_id: taskId })
-      .populate('student_id')
-      .lean();
+    // Admin view: fetch assignments and submissions in parallel
+    const [assignments, submissions] = await Promise.all([
+      TaskAssignment.find({ task_id: taskId })
+        .populate({
+          path: 'student_id',
+          select: 'roll_number name email phone year section',
+        })
+        .lean(),
+      Submission.find({ task_id: taskId }).lean(),
+    ]);
 
-    const submissions = await Submission.find({ task_id: taskId }).lean();
+    const subMap = new Map<string, any>();
+    for (const sub of submissions) {
+      subMap.set(sub.student_id.toString(), sub);
+    }
+
+    const now = new Date();
+    const isPastDeadline = now > new Date(task.deadline);
 
     const completedList: any[] = [];
     const notCompletedList: any[] = [];
@@ -68,10 +87,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       const st: any = a.student_id;
       if (!st) continue;
 
+      const stIdStr = st._id.toString();
+
       if (a.status === 'COMPLETED') {
-        const sub = submissions.find((s) => s.student_id.toString() === st._id.toString());
+        const sub = subMap.get(stIdStr);
         completedList.push({
-          student_id: st._id.toString(),
+          student_id: stIdStr,
           roll_number: st.roll_number,
           name: st.name,
           email: st.email,
@@ -89,15 +110,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           submission_submitted_at: sub?.submitted_at || null,
         });
       } else {
+        const dynamicStatus = isPastDeadline && a.status === 'PENDING' ? 'OVERDUE' : a.status;
         notCompletedList.push({
-          student_id: st._id.toString(),
+          student_id: stIdStr,
           roll_number: st.roll_number,
           name: st.name,
           email: st.email,
           phone: st.phone,
           year: st.year,
           section: st.section,
-          assignment_status: a.status,
+          assignment_status: dynamicStatus,
           assigned_at: a.assigned_at,
           completed_at: a.completed_at,
         });
@@ -105,7 +127,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     // Sort
-    completedList.sort((a, b) => (b.completed_at || 0) - (a.completed_at || 0));
+    completedList.sort((a, b) => (new Date(b.completed_at || 0).getTime()) - (new Date(a.completed_at || 0).getTime()));
     notCompletedList.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
 
     const totalAssigned = completedList.length + notCompletedList.length;
@@ -114,7 +136,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const overdueCount = notCompletedList.filter((s) => s.assignment_status === 'OVERDUE').length;
     const completionRate = totalAssigned > 0 ? Math.round((completedCount / totalAssigned) * 100) : 0;
 
-    return NextResponse.json({
+    const responseData = {
       task: {
         ...task,
         id: (task as any)._id.toString(),
@@ -133,7 +155,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         overdue_count: overdueCount,
         completion_rate: completionRate,
       },
-    });
+    };
+
+    setCached(cacheKey, responseData, 15);
+
+    return NextResponse.json(responseData);
   } catch (error: any) {
     console.error('Error fetching task details:', error);
     return NextResponse.json({ error: 'Failed to fetch task details' }, { status: 500 });
@@ -172,6 +198,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     task.updated_at = new Date();
 
     await task.save();
+    invalidateCache(); // Clear cache
+
     await logAdminAction(user.id, 'EDIT_TASK', `Updated task: ${task.title}`);
 
     return NextResponse.json({ success: true, message: 'Task updated successfully' });
@@ -202,6 +230,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     task.status = 'ARCHIVED';
     task.updated_at = new Date();
     await task.save();
+    invalidateCache();
 
     await logAdminAction(user.id, 'ARCHIVE_TASK', `Archived task: ${task.title}`);
 

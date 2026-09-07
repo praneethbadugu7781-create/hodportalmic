@@ -25,6 +25,7 @@ import { useToast } from '../ui/Toast';
 interface TaskTrackerProps {
   tasks: Task[];
   selectedTaskId: number | null;
+  tasksLoading?: boolean;
   onSelectTask: (taskId: number) => void;
   onOpenStudentProfile: (studentId: number) => void;
 }
@@ -32,6 +33,7 @@ interface TaskTrackerProps {
 export function TaskTracker({
   tasks,
   selectedTaskId,
+  tasksLoading = false,
   onSelectTask,
   onOpenStudentProfile,
 }: TaskTrackerProps) {
@@ -39,6 +41,7 @@ export function TaskTracker({
   const [activeTab, setActiveTab] = useState<'not_completed' | 'completed'>('not_completed');
   const [taskData, setTaskData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [taskCache, setTaskCache] = useState<Record<number, any>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [yearFilter, setYearFilter] = useState<string>('all');
@@ -53,25 +56,40 @@ export function TaskTracker({
 
   useEffect(() => {
     if (activeTask?.id) {
-      fetchTaskDetails(activeTask.id);
+      if (taskCache[activeTask.id]) {
+        // Instant restore from client cache (0ms delay)
+        setTaskData(taskCache[activeTask.id]);
+        setLoading(false);
+        // SWR revalidate in background
+        fetchTaskDetails(activeTask.id, true);
+      } else {
+        fetchTaskDetails(activeTask.id, false);
+      }
       setSelectedStudentIds([]);
     }
   }, [activeTask?.id]);
 
-  const fetchTaskDetails = async (taskId: number) => {
-    setLoading(true);
+  const fetchTaskDetails = async (taskId: number, isBackground = false) => {
+    if (!isBackground) {
+      setLoading(true);
+    }
     try {
       const res = await fetch(`/api/tasks/${taskId}`);
       const data = await res.json();
       if (res.ok) {
         setTaskData(data);
-      } else {
+        setTaskCache((prev) => ({ ...prev, [taskId]: data }));
+      } else if (!isBackground) {
         error(data.error || 'Failed to load task details');
       }
     } catch {
-      error('Failed to load task details');
+      if (!isBackground) {
+        error('Failed to load task details');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   };
 
@@ -160,6 +178,33 @@ export function TaskTracker({
     setReminderMessageText(msg);
     setShowReminderModal(true);
   };
+
+  if (tasksLoading) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden p-6 animate-pulse space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="h-5 w-32 bg-slate-200 rounded-lg" />
+              <div className="h-5 w-24 bg-slate-100 rounded-lg" />
+            </div>
+            <div className="h-7 w-72 bg-slate-200 rounded-md" />
+            <div className="h-4 w-96 bg-slate-100 rounded-md" />
+          </div>
+          <div className="h-20 w-56 bg-slate-100 rounded-xl" />
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-64 bg-slate-100 rounded-xl" />
+          <div className="h-10 w-44 bg-slate-100 rounded-xl" />
+        </div>
+        <div className="space-y-3 pt-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-12 w-full bg-slate-50 border border-slate-100 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!activeTask) {
     return (
@@ -435,8 +480,14 @@ export function TaskTracker({
 
       {/* Student List View */}
       <div className="overflow-x-auto">
-        {loading ? (
-          <div className="p-12 text-center text-slate-400">Loading student submission data...</div>
+        {loading && !taskData ? (
+          <div className="p-6 space-y-3 animate-pulse">
+            <div className="h-10 bg-slate-100 rounded-lg w-full" />
+            <div className="h-12 bg-slate-50 border border-slate-100 rounded-xl w-full" />
+            <div className="h-12 bg-slate-50 border border-slate-100 rounded-xl w-full" />
+            <div className="h-12 bg-slate-50 border border-slate-100 rounded-xl w-full" />
+            <div className="h-12 bg-slate-50 border border-slate-100 rounded-xl w-full" />
+          </div>
         ) : activeTab === 'not_completed' ? (
           filteredNotCompleted.length === 0 ? (
             <div className="p-12 text-center">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase, logAdminAction } from '@/lib/mongodb';
 import { getAuthenticatedUser, hashPassword } from '@/lib/auth';
 import { Student, User, Task, TaskAssignment, AcademicHistory } from '@/lib/models';
+import { getCached, setCached, invalidateCache } from '@/lib/cache';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,12 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const skip = (page - 1) * limit;
 
+    const cacheKey = `students_${search}_${year}_${section}_${status}_${page}_${limit}`;
+    const cached = getCached<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     const query: any = {};
 
     if (status && status !== 'all') {
@@ -43,35 +50,49 @@ export async function GET(req: NextRequest) {
       query.$or = [{ roll_number: regex }, { name: regex }, { email: regex }];
     }
 
-    const total = await Student.countDocuments(query);
-    const rawStudents = await Student.find(query)
-      .sort({ roll_number: 1 })
-      .skip(skip)
-      .limit(limit)
+    // Parallel count and find
+    const [total, rawStudents] = await Promise.all([
+      Student.countDocuments(query),
+      Student.find(query)
+        .sort({ roll_number: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    // Attach task completion counts using lean projection and O(1) map
+    const studentIds = rawStudents.map((s) => s._id);
+    const assignments = await TaskAssignment.find({ student_id: { $in: studentIds } })
+      .select('student_id status')
       .lean();
 
-    // Attach task completion counts
-    const studentIds = rawStudents.map((s) => s._id);
-    const assignments = await TaskAssignment.find({ student_id: { $in: studentIds } }).lean();
+    const assignMap = new Map<string, { total: number; completed: number; pending: number; overdue: number }>();
+    for (const a of assignments) {
+      const sId = a.student_id.toString();
+      let entry = assignMap.get(sId);
+      if (!entry) {
+        entry = { total: 0, completed: 0, pending: 0, overdue: 0 };
+        assignMap.set(sId, entry);
+      }
+      entry.total++;
+      if (a.status === 'COMPLETED') entry.completed++;
+      else if (a.status === 'PENDING') entry.pending++;
+      else if (a.status === 'OVERDUE') entry.overdue++;
+    }
 
     const students = rawStudents.map((s) => {
-      const sAssignments = assignments.filter((a) => a.student_id.toString() === s._id.toString());
-      const totalAssigned = sAssignments.length;
-      const completed = sAssignments.filter((a) => a.status === 'COMPLETED').length;
-      const pending = sAssignments.filter((a) => a.status === 'PENDING').length;
-      const overdue = sAssignments.filter((a) => a.status === 'OVERDUE').length;
-
+      const counts = assignMap.get(s._id.toString()) || { total: 0, completed: 0, pending: 0, overdue: 0 };
       return {
         ...s,
         id: s._id.toString(),
-        total_assigned_tasks: totalAssigned,
-        completed_tasks_count: completed,
-        pending_tasks_count: pending,
-        overdue_tasks_count: overdue,
+        total_assigned_tasks: counts.total,
+        completed_tasks_count: counts.completed,
+        pending_tasks_count: counts.pending,
+        overdue_tasks_count: counts.overdue,
       };
     });
 
-    return NextResponse.json({
+    const responsePayload = {
       students,
       pagination: {
         total,
@@ -79,7 +100,10 @@ export async function GET(req: NextRequest) {
         limit,
         totalPages: Math.ceil(total / limit) || 1,
       },
-    });
+    };
+
+    setCached(cacheKey, responsePayload, 15);
+    return NextResponse.json(responsePayload);
   } catch (error: any) {
     console.error('Error fetching students:', error);
     return NextResponse.json({ error: 'Failed to fetch students' }, { status: 500 });
@@ -182,6 +206,9 @@ export async function POST(req: NextRequest) {
     }
 
     await logAdminAction(user.id, 'ADD_STUDENT', `Added student ${name} (${cleanRoll}) in ${year} Sec ${section}`);
+
+    invalidateCache('students_');
+    invalidateCache('analytics');
 
     return NextResponse.json({
       success: true,

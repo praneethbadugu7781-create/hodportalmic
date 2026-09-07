@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase, logAdminAction } from '@/lib/mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Task, Student, TaskAssignment, Submission } from '@/lib/models';
+import { getCached, setCached, invalidateCache } from '@/lib/cache';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -15,36 +16,27 @@ export async function GET(req: NextRequest) {
 
     await connectToDatabase();
 
-    // Auto-update pending assignments where deadline passed to OVERDUE
-    const now = new Date();
-    const overdueTasks = await Task.find({ deadline: { $lt: now } }).select('_id');
-    const overdueTaskIds = overdueTasks.map((t) => t._id);
-    if (overdueTaskIds.length > 0) {
-      await TaskAssignment.updateMany(
-        { task_id: { $in: overdueTaskIds }, status: 'PENDING' },
-        { status: 'OVERDUE' }
-      );
-    }
-
     // Student specific view
     if (user?.role === 'student' && student) {
       const studentObjId = new mongoose.Types.ObjectId(student.id);
-      const assignments = await TaskAssignment.find({ student_id: studentObjId })
-        .populate('task_id')
-        .lean();
+      const [assignments, submissions] = await Promise.all([
+        TaskAssignment.find({ student_id: studentObjId }).populate('task_id').lean(),
+        Submission.find({ student_id: studentObjId }).lean(),
+      ]);
 
-      const submissions = await Submission.find({ student_id: studentObjId }).lean();
+      const subMap = new Map(submissions.map((s) => [s.task_id.toString(), s]));
 
       const studentTasks = assignments
         .filter((a: any) => a.task_id && a.task_id.status === 'ACTIVE')
         .map((a: any) => {
           const t = a.task_id;
-          const sub = submissions.find((s) => s.task_id.toString() === t._id.toString());
+          const sub = subMap.get(t._id.toString());
+          const isOverdue = a.status === 'PENDING' && new Date() > new Date(t.deadline);
           return {
             ...t,
             id: t._id.toString(),
             assignment_id: a._id.toString(),
-            assignment_status: a.status,
+            assignment_status: isOverdue ? 'OVERDUE' : a.status,
             assigned_at: a.assigned_at,
             completed_at: a.completed_at,
             submission_id: sub?._id?.toString() || null,
@@ -61,35 +53,59 @@ export async function GET(req: NextRequest) {
     // Admin view
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') || '';
+    const forceRefresh = searchParams.get('refresh') === 'true';
+
+    const cacheKey = `admin_tasks_${status || 'all'}`;
+    if (!forceRefresh) {
+      const cached = getCached<any>(cacheKey);
+      if (cached) {
+        return NextResponse.json(cached);
+      }
+    }
+
     const query: any = {};
     if (status && status !== 'all') {
       query.status = status;
     }
 
-    const rawTasks = await Task.find(query).sort({ created_at: -1 }).lean();
-    const taskIds = rawTasks.map((t) => t._id);
-    const allAssignments = await TaskAssignment.find({ task_id: { $in: taskIds } }).lean();
+    const [rawTasks, allAssignments] = await Promise.all([
+      Task.find(query).sort({ created_at: -1 }).lean(),
+      TaskAssignment.find().select('task_id status').lean(),
+    ]);
+
+    const assignmentsByTask = new Map<string, { total: number; completed: number; pending: number; overdue: number }>();
+
+    for (const a of allAssignments) {
+      const tId = a.task_id.toString();
+      if (!assignmentsByTask.has(tId)) {
+        assignmentsByTask.set(tId, { total: 0, completed: 0, pending: 0, overdue: 0 });
+      }
+      const stats = assignmentsByTask.get(tId)!;
+      stats.total++;
+      if (a.status === 'COMPLETED') stats.completed++;
+      else if (a.status === 'PENDING') stats.pending++;
+      else if (a.status === 'OVERDUE') stats.overdue++;
+    }
 
     const tasks = rawTasks.map((t) => {
-      const tAssignments = allAssignments.filter((a) => a.task_id.toString() === t._id.toString());
-      const total = tAssignments.length;
-      const completed = tAssignments.filter((a) => a.status === 'COMPLETED').length;
-      const pending = tAssignments.filter((a) => a.status === 'PENDING').length;
-      const overdue = tAssignments.filter((a) => a.status === 'OVERDUE').length;
-      const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+      const tStats = assignmentsByTask.get(t._id.toString()) || { total: 0, completed: 0, pending: 0, overdue: 0 };
+      const completionRate = tStats.total > 0 ? Math.round((tStats.completed / tStats.total) * 100) : 0;
 
       return {
         ...t,
         id: t._id.toString(),
-        total_assigned: total,
-        completed_count: completed,
-        pending_count: pending,
-        overdue_count: overdue,
+        total_assigned: tStats.total,
+        completed_count: tStats.completed,
+        pending_count: tStats.pending,
+        overdue_count: tStats.overdue,
         completion_rate: completionRate,
       };
     });
 
-    return NextResponse.json({ tasks });
+    const responseData = { tasks };
+    setCached(cacheKey, responseData, 15);
+
+    return NextResponse.json(responseData);
   } catch (error: any) {
     console.error('Error fetching tasks:', error);
     return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
@@ -163,7 +179,7 @@ export async function POST(req: NextRequest) {
       studentQuery._id = { $in: target_student_ids };
     }
 
-    const targetedStudents = await Student.find(studentQuery).select('_id');
+    const targetedStudents = await Student.find(studentQuery).select('_id').lean();
 
     // Batch insert assignments
     if (targetedStudents.length > 0) {
@@ -173,8 +189,10 @@ export async function POST(req: NextRequest) {
         status: 'PENDING',
         assigned_at: new Date(),
       }));
-      await TaskAssignment.insertMany(assignmentDocs);
+      await TaskAssignment.insertMany(assignmentDocs, { ordered: false });
     }
+
+    invalidateCache(); // Instantly clear task and analytics cache
 
     await logAdminAction(
       user.id,
