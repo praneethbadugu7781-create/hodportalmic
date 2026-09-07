@@ -48,27 +48,270 @@ export function BulkImportModal({ isOpen, onClose, onImportSuccess }: BulkImport
     processSelectedFile(selectedFile);
   };
 
+  // Helper to extract text from PDF in browser if server route fails
+  const extractTextFromPdfInBrowser = async (pdfFile: File): Promise<string> => {
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    const len = bytes.byteLength;
+    const chunkSize = 8192;
+    for (let i = 0; i < len; i += chunkSize) {
+      const slice = bytes.subarray(i, Math.min(i + chunkSize, len));
+      binary += String.fromCharCode.apply(null, Array.from(slice));
+    }
+
+    let fullText = '';
+    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = streamRegex.exec(binary)) !== null) {
+      const rawChunkStr = match[1];
+      let decompressed = '';
+
+      if (typeof DecompressionStream !== 'undefined') {
+        try {
+          const rawBytes = new Uint8Array(rawChunkStr.length);
+          for (let j = 0; j < rawChunkStr.length; j++) {
+            rawBytes[j] = rawChunkStr.charCodeAt(j);
+          }
+          const ds = new DecompressionStream('deflate');
+          const writer = ds.writable.getWriter();
+          writer.write(rawBytes);
+          writer.close();
+          decompressed = await new Response(ds.readable).text();
+        } catch {
+          decompressed = rawChunkStr;
+        }
+      } else {
+        decompressed = rawChunkStr;
+      }
+
+      // Extract text from text blocks: (string) Tj
+      const tjRegex = /\(([^)]*)\)\s*Tj/g;
+      let tj: RegExpExecArray | null;
+      while ((tj = tjRegex.exec(decompressed)) !== null) {
+        fullText += tj[1] + ' ';
+      }
+
+      // Extract text from hex: <hex> Tj
+      const tjHexRegex = /<([0-9a-fA-F\s]+)>\s*Tj/g;
+      let tjHex: RegExpExecArray | null;
+      while ((tjHex = tjHexRegex.exec(decompressed)) !== null) {
+        const clean = tjHex[1].replace(/\s+/g, '');
+        let decoded = '';
+        for (let k = 0; k < clean.length; k += 2) {
+          decoded += String.fromCharCode(parseInt(clean.substr(k, 2), 16));
+        }
+        fullText += decoded + ' ';
+      }
+
+      // Extract text from text arrays: [(string) 20 (string)] TJ
+      const tjArrayRegex = /\[([\s\S]*?)\]\s*TJ/g;
+      let tja: RegExpExecArray | null;
+      while ((tja = tjArrayRegex.exec(decompressed)) !== null) {
+        const parts = tja[1].match(/\(([^)]*)\)/g);
+        if (parts) {
+          fullText += parts.map((p) => p.slice(1, -1)).join('') + ' ';
+        }
+      }
+    }
+
+    if (!fullText.trim()) {
+      const rawLiteralRegex = /\(([^)]+)\)/g;
+      let rl: RegExpExecArray | null;
+      while ((rl = rawLiteralRegex.exec(binary)) !== null) {
+        if (rl[1].length > 3 && /[a-zA-Z0-9]/.test(rl[1])) {
+          fullText += rl[1] + ' ';
+        }
+      }
+    }
+
+    return fullText;
+  };
+
+  const parseStudentsFromClientText = (
+    text: string,
+    yearVal: string,
+    secVal: string,
+    deptVal: string
+  ) => {
+    const rollRegex = /(?:^|[\s,;:(/\[|\t])([0-9]{2}[A-Za-z0-9]{2}[15A-Za-z][A-Za-z0-9]{5})(?=[\s,;:\"'\n\r)/\]|\t]|$)/gi;
+    const matches: { roll: string; index: number }[] = [];
+    let m: RegExpExecArray | null;
+
+    while ((m = rollRegex.exec(text)) !== null) {
+      const roll = m[1].toUpperCase();
+      if (/[A-Z]/i.test(roll) && /\d/.test(roll)) {
+        const matchIndex = m.index + m[0].indexOf(m[1]);
+        const before = text.slice(Math.max(0, matchIndex - 1), matchIndex);
+        const after = text.slice(matchIndex + roll.length, matchIndex + roll.length + 1);
+        if (before !== '@' && after !== '@') {
+          matches.push({ roll, index: matchIndex });
+        }
+      }
+    }
+
+    const students: any[] = [];
+    const seen = new Set<string>();
+
+    for (let i = 0; i < matches.length; i++) {
+      const curr = matches[i];
+      if (seen.has(curr.roll)) continue;
+
+      const startIndex = curr.index + curr.roll.length;
+      const endIndex = i + 1 < matches.length ? matches[i + 1].index : text.length;
+      let chunk = text.substring(startIndex, endIndex);
+
+      const emailMatch = chunk.match(/\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/);
+      const email = emailMatch ? emailMatch[1].toLowerCase() : `${curr.roll.toLowerCase()}@mictech.edu.in`;
+
+      const phoneMatch = chunk.match(/\b([6-9]\d{9})\b/);
+      const phone = phoneMatch ? phoneMatch[1] : null;
+
+      let year = yearVal;
+      if (/2nd\s*Year|second\s*year|\bII(?:\s*B\.?Tech)?\b/i.test(chunk)) year = '2nd Year';
+      else if (/3rd\s*Year|third\s*year|\bIII(?:\s*B\.?Tech)?\b/i.test(chunk)) year = '3rd Year';
+      else if (/4th\s*Year|final\s*year|\bIV(?:\s*B\.?Tech)?\b/i.test(chunk)) year = 'Final Year';
+
+      let section = secVal;
+      const secMatch = chunk.match(/Sec(?:tion)?[\s\n.:-]*([A-C])\b/i) || chunk.match(/\(([A-C])\)/i);
+      if (secMatch) {
+        section = secMatch[1].toUpperCase();
+      } else if (curr.roll.startsWith('24H71A61')) {
+        const lastPart = curr.roll.slice(-2);
+        const num = parseInt(lastPart, 10);
+        if (!isNaN(num) && num <= 66) section = 'A';
+        else section = 'B';
+      }
+
+      let namePart = chunk;
+      if (emailMatch) namePart = namePart.replace(emailMatch[0], ' ');
+      if (phoneMatch) namePart = namePart.replace(phoneMatch[0], ' ');
+
+      namePart = namePart.replace(/\b(?:ACTIVE|INACTIVE|PENDING|COMPLETED|VERIFIED|DONE)\b/gi, ' ');
+      namePart = namePart.replace(/\b(?:3rd|2nd|4th|final)\s*year\b/gi, ' ');
+      namePart = namePart.replace(/Class\s*&\s*Sec(?:tion)?/gi, ' ');
+      namePart = namePart.replace(/\(?Sec(?:tion)?[\s\n.:-]*[A-C]\)?/gi, ' ');
+      namePart = namePart.replace(/\b(?:B\.?Tech|Semester|Department|Artificial|Intelligence|Machine|Learning|AIML|AI&ML|CSE)\b/gi, ' ');
+      namePart = namePart.replace(/\bPage\s*\d+\s*(?:of\s*\d+)?\b/gi, ' ');
+      namePart = namePart.replace(/^\s*\d+[\s.)-]+/, ' ');
+      namePart = namePart.replace(/[^a-zA-Z\s.-]/g, ' ');
+
+      let cleanName = namePart.trim().replace(/\s+/g, ' ').replace(/^[-\s.]+|[-\s.]+$/g, '');
+      if (!cleanName || cleanName.length < 2) cleanName = `Student ${curr.roll}`;
+      if (cleanName.length > 50) cleanName = cleanName.slice(0, 50).trim();
+
+      students.push({
+        roll_number: curr.roll,
+        name: cleanName,
+        email,
+        phone,
+        year,
+        section,
+        department: deptVal,
+      });
+      seen.add(curr.roll);
+    }
+    return students;
+  };
+
+  const runClientSidePdfFallback = async (pdfFile: File, yearVal: string, secVal: string) => {
+    try {
+      const text = await extractTextFromPdfInBrowser(pdfFile);
+      if (!text.trim()) {
+        error('Could not extract readable text from PDF. Please ensure the document is not a scanned image.');
+        setPreviewData(null);
+        setParsedRows([]);
+        return;
+      }
+
+      const students = parseStudentsFromClientText(text, yearVal, secVal, defaultDepartment);
+      if (students.length === 0) {
+        error('No student roll numbers could be detected in this PDF.');
+        setPreviewData(null);
+        setParsedRows([]);
+        return;
+      }
+
+      setParsedRows(students);
+
+      // Validate through dry run
+      const valRes = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records: students, isDryRun: true }),
+      });
+
+      if (valRes.ok) {
+        const valData = await valRes.json();
+        setPreviewData({
+          ...valData,
+          fileName: pdfFile.name,
+          extractedCount: students.length,
+          allValidRecords: students,
+        });
+        info(`Extracted ${students.length} students from PDF (${valData.validCount || students.length} valid)`);
+      } else {
+        const errJson = await valRes.json().catch(() => ({}));
+        error(errJson.error || 'Validation failed for parsed records');
+      }
+    } catch (fbErr: any) {
+      console.error('Client PDF fallback error:', fbErr);
+      error(fbErr.message || 'Error processing PDF document');
+      setPreviewData(null);
+      setParsedRows([]);
+    }
+  };
+
   const processSelectedFile = (selectedFile: File) => {
     setFile(selectedFile);
     const isPdf = selectedFile.name.toLowerCase().endsWith('.pdf') || selectedFile.type === 'application/pdf';
 
+    // Auto-detect year & section from filename if user uploaded nominal roll:
+    // e.g. "III Year Students Rol List V-Sem-2026-2027-SEC A.pdf"
+    let detectedYear = defaultYear;
+    let detectedSec = defaultSection;
+    const lowerName = selectedFile.name.toLowerCase();
+
+    if (lowerName.includes('iii year') || lowerName.includes('3rd year') || lowerName.includes('v-sem') || lowerName.includes('v sem')) {
+      detectedYear = '3rd Year';
+      setDefaultYear('3rd Year');
+    } else if (lowerName.includes('ii year') || lowerName.includes('2nd year') || lowerName.includes('iii-sem')) {
+      detectedYear = '2nd Year';
+      setDefaultYear('2nd Year');
+    } else if (lowerName.includes('iv year') || lowerName.includes('4th year') || lowerName.includes('final year')) {
+      detectedYear = 'Final Year';
+      setDefaultYear('Final Year');
+    }
+
+    if (lowerName.includes('sec a') || lowerName.includes('section a') || lowerName.includes('sec-a')) {
+      detectedSec = 'A';
+      setDefaultSection('A');
+    } else if (lowerName.includes('sec b') || lowerName.includes('section b') || lowerName.includes('sec-b')) {
+      detectedSec = 'B';
+      setDefaultSection('B');
+    }
+
     if (isPdf) {
       setFileType('pdf');
-      parsePdfFile(selectedFile);
+      parsePdfFile(selectedFile, detectedYear, detectedSec);
     } else {
       setFileType('csv');
       parseCsvFile(selectedFile);
     }
   };
 
-  const parsePdfFile = async (pdfFile: File) => {
+  const parsePdfFile = async (pdfFile: File, yearOverride?: string, secOverride?: string) => {
     setLoading(true);
     setPreviewData(null);
+    const useYear = yearOverride || defaultYear;
+    const useSec = secOverride || defaultSection;
+
     try {
       const formData = new FormData();
       formData.append('file', pdfFile);
-      formData.append('defaultYear', defaultYear);
-      formData.append('defaultSection', defaultSection);
+      formData.append('defaultYear', useYear);
+      formData.append('defaultSection', useSec);
       formData.append('defaultDepartment', defaultDepartment);
 
       const res = await fetch('/api/import/parse-pdf', {
@@ -76,20 +319,33 @@ export function BulkImportModal({ isOpen, onClose, onImportSuccess }: BulkImport
         body: formData,
       });
 
-      const data = await res.json();
-      if (res.ok) {
+      let data: any = null;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (res.ok && data?.success) {
         setPreviewData(data);
         setParsedRows(data.allValidRecords || data.validRows || []);
         info(`Extracted ${data.totalRecords} students from PDF (${data.validCount} valid)`);
-      } else {
-        error(data.error || 'Failed to extract students from PDF');
+        return;
+      }
+
+      // If server returned a client validation error (e.g. 422: no students), display exact message
+      if (res.status === 422 && data?.error) {
+        error(data.error);
         setPreviewData(null);
         setParsedRows([]);
+        return;
       }
-    } catch {
-      error('Error processing PDF document');
-      setPreviewData(null);
-      setParsedRows([]);
+
+      // Fallback: If server returned an error (500, HTML page, Lambda crash), run client-side parser!
+      console.warn('Server-side PDF route returned error, running client-side fallback...');
+      await runClientSidePdfFallback(pdfFile, useYear, useSec);
+    } catch (err: any) {
+      console.warn('Network or server error during PDF parsing, running client-side fallback...', err);
+      await runClientSidePdfFallback(pdfFile, useYear, useSec);
     } finally {
       setLoading(false);
     }
@@ -128,7 +384,7 @@ export function BulkImportModal({ isOpen, onClose, onImportSuccess }: BulkImport
 
   const handleReapplyPdfDefaults = () => {
     if (file && fileType === 'pdf') {
-      parsePdfFile(file);
+      parsePdfFile(file, defaultYear, defaultSection);
     }
   };
 

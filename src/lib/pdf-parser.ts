@@ -1,4 +1,4 @@
-import { PDFParse } from 'pdf-parse';
+import zlib from 'zlib';
 
 export interface ExtractedStudent {
   roll_number: string;
@@ -17,38 +17,198 @@ export interface ParsePdfOptions {
 }
 
 /**
- * Robust extractor that parses students from PDF documents (nominal rolls, attendance sheets, export tables)
+ * Unescape PDF literal string escapes: \ddd (octal), \n, \r, \t, \(, \), \\
  */
-export async function extractStudentsFromPdf(
-  pdfBuffer: Buffer,
+function decodePdfLiteralString(str: string): string {
+  return str
+    .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\b/g, '\b')
+    .replace(/\\f/g, '\f')
+    .replace(/\\\(/g, '(')
+    .replace(/\\\)/g, ')')
+    .replace(/\\\\/g, '\\');
+}
+
+/**
+ * Decode hex strings like <3234483731>
+ */
+function decodePdfHexString(hex: string): string {
+  const cleanHex = hex.replace(/\s+/g, '');
+  let result = '';
+  for (let i = 0; i < cleanHex.length; i += 2) {
+    const byteHex = cleanHex.substr(i, 2);
+    if (byteHex.length === 1) {
+      result += String.fromCharCode(parseInt(byteHex + '0', 16));
+    } else {
+      result += String.fromCharCode(parseInt(byteHex, 16));
+    }
+  }
+  return result;
+}
+
+/**
+ * Zero-dependency pure Node.js PDF text extractor using built-in zlib.
+ * Extracts text operators from FlateDecode compressed streams and uncompressed content streams.
+ */
+export function extractTextPure(buffer: Buffer): string {
+  const binary = buffer.toString('latin1');
+  let fullText = '';
+
+  const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = streamRegex.exec(binary)) !== null) {
+    const rawChunk = Buffer.from(match[1], 'latin1');
+    let decompressed = '';
+    try {
+      decompressed = zlib.inflateSync(rawChunk).toString('latin1');
+    } catch {
+      try {
+        decompressed = zlib.unzipSync(rawChunk).toString('latin1');
+      } catch {
+        decompressed = rawChunk.toString('latin1');
+      }
+    }
+
+    // Extract text from text blocks: (string) Tj
+    const tjRegex = /\(([^)]*)\)\s*Tj/g;
+    let tj: RegExpExecArray | null;
+    while ((tj = tjRegex.exec(decompressed)) !== null) {
+      fullText += decodePdfLiteralString(tj[1]) + ' ';
+    }
+
+    // Extract text from hex: <hex> Tj
+    const tjHexRegex = /<([0-9a-fA-F\s]+)>\s*Tj/g;
+    let tjHex: RegExpExecArray | null;
+    while ((tjHex = tjHexRegex.exec(decompressed)) !== null) {
+      fullText += decodePdfHexString(tjHex[1]) + ' ';
+    }
+
+    // Extract text from text arrays: [(string) 20 (string)] TJ or [<hex> 10 <hex>] TJ
+    const tjArrayRegex = /\[([\s\S]*?)\]\s*TJ/g;
+    let tja: RegExpExecArray | null;
+    while ((tja = tjArrayRegex.exec(decompressed)) !== null) {
+      const arrayContent = tja[1];
+      const elemRegex = /\(([^)]*)\)|<([0-9a-fA-F\s]+)>/g;
+      let elem: RegExpExecArray | null;
+      let combined = '';
+      while ((elem = elemRegex.exec(arrayContent)) !== null) {
+        if (elem[1] !== undefined) {
+          combined += decodePdfLiteralString(elem[1]);
+        } else if (elem[2] !== undefined) {
+          combined += decodePdfHexString(elem[2]);
+        }
+      }
+      fullText += combined + ' ';
+    }
+
+    // Extract text from ' operator: (string) '
+    const quoteRegex = /\(([^)]*)\)\s*['"]/g;
+    let qr: RegExpExecArray | null;
+    while ((qr = quoteRegex.exec(decompressed)) !== null) {
+      fullText += decodePdfLiteralString(qr[1]) + '\n';
+    }
+  }
+
+  // Fallback: If no stream text found, scan for literal strings in uncompressed PDF objects
+  if (!fullText.trim()) {
+    const rawLiteralRegex = /\(([^)]+)\)/g;
+    let rl: RegExpExecArray | null;
+    while ((rl = rawLiteralRegex.exec(binary)) !== null) {
+      if (rl[1].length > 3 && /[a-zA-Z0-9]/.test(rl[1])) {
+        fullText += decodePdfLiteralString(rl[1]) + ' ';
+      }
+    }
+  }
+
+  return fullText;
+}
+
+/**
+ * Text extractor using pdfjs-dist legacy Node.js build with coordinate row grouping.
+ */
+async function extractTextWithPdfJs(buffer: Buffer): Promise<string> {
+  try {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const loadingTask = pdfjs.getDocument({
+      data: new Uint8Array(buffer),
+      disableFontFace: true,
+      useSystemFonts: true,
+    });
+
+    const pdfDocument = await loadingTask.promise;
+    let textResult = '';
+
+    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+      const page = await pdfDocument.getPage(pageNum);
+      const content = await page.getTextContent();
+
+      // Group text items by Y coordinate so rows are ordered top-to-bottom and left-to-right
+      const linesMap = new Map<number, { x: number; str: string }[]>();
+
+      for (const item of content.items) {
+        if (!('str' in item) || !item.str.trim()) continue;
+        const y = Math.round(item.transform[5]);
+
+        let targetY: number | null = null;
+        for (const k of Array.from(linesMap.keys())) {
+          if (Math.abs(k - y) <= 4) {
+            targetY = k;
+            break;
+          }
+        }
+
+        if (targetY === null) {
+          targetY = y;
+          linesMap.set(targetY, []);
+        }
+
+        linesMap.get(targetY)!.push({ x: item.transform[4], str: item.str });
+      }
+
+      const sortedY = Array.from(linesMap.keys()).sort((a, b) => b - a);
+      for (const y of sortedY) {
+        const rowItems = linesMap.get(y)!.sort((a, b) => a.x - b.x);
+        textResult += rowItems.map((i) => i.str).join(' ') + '\n';
+      }
+    }
+
+    return textResult;
+  } catch (err) {
+    console.warn('pdfjs-dist legacy extraction failed, falling back to pure zlib stream parser:', err);
+    return '';
+  }
+}
+
+/**
+ * Robust parsing of students from plain text extracted from PDF documents.
+ */
+export function parseStudentsFromText(
+  fullText: string,
   options: ParsePdfOptions = {}
-): Promise<{ students: ExtractedStudent[]; rawText: string; totalDetected: number }> {
+): ExtractedStudent[] {
   const defaultYear = options.defaultYear || '3rd Year';
   const defaultSection = options.defaultSection || 'A';
   const defaultDepartment = options.defaultDepartment || 'Artificial Intelligence & Machine Learning';
 
-  const parser = new PDFParse({ data: pdfBuffer });
-  const textResult = await parser.getText();
-  const fullText = textResult.text || '';
-
-  if (!fullText.trim()) {
-    return { students: [], rawText: '', totalDetected: 0 };
-  }
+  if (!fullText.trim()) return [];
 
   // Regex to match student roll numbers:
-  // Typically 10 chars (e.g. 24H71A6101, 23H75A0501, 22H71A...) or 8-12 alphanumeric token with letters & numbers
-  const rollRegex = /(?:^|[\s,;:(/\[])([0-9]{2}[A-Za-z0-9]{2}[15A-Za-z][A-Za-z0-9]{5})(?=[\s,;:\"'\n\r)/\]]|$)/gi;
+  // Typically 10 chars (e.g. 24H71A6101, 23H75A6101, 22H71A...) with delimiters
+  const rollRegex = /(?:^|[\s,;:(/\[|\t])([0-9]{2}[A-Za-z0-9]{2}[15A-Za-z][A-Za-z0-9]{5})(?=[\s,;:\"'\n\r)/\]|\t]|$)/gi;
   const matches: { roll: string; index: number }[] = [];
   let m: RegExpExecArray | null;
 
   while ((m = rollRegex.exec(fullText)) !== null) {
     const candidateRoll = m[1].toUpperCase();
 
-    // Must have at least one letter and at least one digit (to avoid pure phone numbers like 9876543210)
+    // Must have at least one letter and at least one digit
     if (/[A-Z]/i.test(candidateRoll) && /\d/.test(candidateRoll)) {
       const matchIndex = m.index + m[0].indexOf(m[1]);
 
-      // Ensure it is not an email prefix (e.g. 24h71a6101@mictech.edu.in)
       const beforeChar = fullText.slice(Math.max(0, matchIndex - 1), matchIndex);
       const afterChar = fullText.slice(matchIndex + candidateRoll.length, matchIndex + candidateRoll.length + 1);
 
@@ -58,9 +218,9 @@ export async function extractStudentsFromPdf(
     }
   }
 
-  // Fallback: If no 10-char JNTU/autonomous roll numbers found, search for generic alphanumeric roll tokens
+  // Fallback: If no 10-char roll numbers found, search for generic alphanumeric roll tokens
   if (matches.length === 0) {
-    const genericRollRegex = /(?:^|[\s,;:(/\[])([A-Za-z0-9]{2,4}[-_]?[0-9]{3,6})(?=[\s,;:\"'\n\r)/\]]|$)/gi;
+    const genericRollRegex = /(?:^|[\s,;:(/\[|\t])([A-Za-z0-9]{2,4}[-_]?[0-9]{3,6})(?=[\s,;:\"'\n\r)/\]|\t]|$)/gi;
     let gm: RegExpExecArray | null;
     while ((gm = genericRollRegex.exec(fullText)) !== null) {
       const candidateRoll = gm[1].toUpperCase();
@@ -135,20 +295,21 @@ export async function extractStudentsFromPdf(
     namePart = namePart.replace(/\b(?:3rd|2nd|4th|final)\s*year\b/gi, ' ');
     namePart = namePart.replace(/Class\s*&\s*Sec(?:tion)?/gi, ' ');
     namePart = namePart.replace(/\(?Sec(?:tion)?[\s\n.:-]*[A-C]\)?/gi, ' ');
-    namePart = namePart.replace(/\b(?:B\.?Tech|Semester|Department|Artificial|Intelligence|Machine|Learning|AIML|CSE)\b/gi, ' ');
+    namePart = namePart.replace(/\b(?:B\.?Tech|Semester|Department|Artificial|Intelligence|Machine|Learning|AIML|AI&ML|CSE)\b/gi, ' ');
     namePart = namePart.replace(/\bPage\s*\d+\s*(?:of\s*\d+)?\b/gi, ' ');
     namePart = namePart.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, ' ');
     namePart = namePart.replace(/^\s*\d+[\s.)-]+/, ' '); // remove S.No numbers
     namePart = namePart.replace(/[^a-zA-Z\s.-]/g, ' ');
 
     let cleanName = namePart.trim().replace(/\s+/g, ' ');
+    // Strip leading or trailing dashes, dots, spaces
+    cleanName = cleanName.replace(/^[-\s.]+|[-\s.]+$/g, '');
 
     // If clean name has leftover words or is empty, provide clean fallback
     if (!cleanName || cleanName.length < 2) {
       cleanName = `Student ${current.roll}`;
     }
 
-    // Truncate name if it picked up extra text (e.g. > 50 chars)
     if (cleanName.length > 50) {
       cleanName = cleanName.slice(0, 50).trim();
     }
@@ -166,9 +327,36 @@ export async function extractStudentsFromPdf(
     seenRolls.add(current.roll);
   }
 
+  return students;
+}
+
+/**
+ * Robust extractor that parses students from PDF documents (nominal rolls, attendance sheets, export tables)
+ * Uses pdfjs-dist legacy with automatic fallback to pure zlib stream extraction.
+ */
+export async function extractStudentsFromPdf(
+  pdfBuffer: Buffer,
+  options: ParsePdfOptions = {}
+): Promise<{ students: ExtractedStudent[]; rawText: string; totalDetected: number }> {
+  // Strategy 1: Try pdfjs-dist legacy
+  let rawText = await extractTextWithPdfJs(pdfBuffer);
+  let students = parseStudentsFromText(rawText, options);
+
+  // Strategy 2: If pdfjs yielded no students or empty text, fallback to pure zlib stream extractor
+  if (students.length === 0) {
+    const pureText = extractTextPure(pdfBuffer);
+    if (pureText.trim()) {
+      const pureStudents = parseStudentsFromText(pureText, options);
+      if (pureStudents.length > 0) {
+        students = pureStudents;
+        rawText = pureText;
+      }
+    }
+  }
+
   return {
     students,
-    rawText: fullText.slice(0, 1000),
+    rawText: rawText.slice(0, 1000),
     totalDetected: students.length,
   };
 }
