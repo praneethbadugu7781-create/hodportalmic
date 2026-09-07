@@ -15,19 +15,24 @@ import {
   History,
   X,
   Download,
+  Trash2,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '../ui/Toast';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface StudentProfileModalProps {
   studentId: number | null;
   onClose: () => void;
+  onStudentDeleted?: () => void;
 }
 
-export function StudentProfileModal({ studentId, onClose }: StudentProfileModalProps) {
-  const { error } = useToast();
+export function StudentProfileModal({ studentId, onClose, onStudentDeleted }: StudentProfileModalProps) {
+  const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (studentId) {
@@ -49,6 +54,29 @@ export function StudentProfileModal({ studentId, onClose }: StudentProfileModalP
       error('Failed to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!student) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/students/${student._id || student.id}?mode=permanent`, {
+        method: 'DELETE',
+      });
+      const result = await res.json();
+      if (res.ok) {
+        success(result.message || `Student ${student.roll_number} deleted.`);
+        setShowDeleteModal(false);
+        onClose();
+        onStudentDeleted?.();
+      } else {
+        error(result.error || 'Failed to delete student');
+      }
+    } catch {
+      error('Failed to delete student');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -76,7 +104,7 @@ export function StudentProfileModal({ studentId, onClose }: StudentProfileModalP
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-slate-900">{student?.name || 'Student Profile'}</h2>
+                <h2 className="text-xl font-bold text-slate-900 font-display">{student?.name || 'Student Profile'}</h2>
                 <span className="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-md border border-slate-200">
                   {student?.roll_number}
                 </span>
@@ -87,12 +115,25 @@ export function StudentProfileModal({ studentId, onClose }: StudentProfileModalP
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {student && (
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                title="Permanently Delete Student"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content Scrollable */}
@@ -260,15 +301,38 @@ export function StudentProfileModal({ studentId, onClose }: StudentProfileModalP
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+        <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+          {student ? (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-rose-600 hover:text-rose-800 hover:bg-rose-50 text-xs font-bold rounded-xl border border-rose-200 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Student Record</span>
+            </button>
+          ) : <div />}
+
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl"
+            className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer"
           >
             Close
           </button>
         </div>
       </div>
+
+      {/* Confirm Delete Student Modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Student Account"
+        itemName={student ? `👤 ${student.roll_number} - ${student.name}` : ''}
+        itemDescription={`${student?.year} • Section ${student?.section} • ${student?.email}`}
+        warningText="Permanently deleting this student will delete their profile, user credentials, and all their task submission history from MongoDB Atlas. This action cannot be undone."
+        confirmLabel="Yes, Delete Student"
+        isDeleting={isDeleting}
+        onConfirm={handleDeleteStudent}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }

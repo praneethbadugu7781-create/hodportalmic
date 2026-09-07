@@ -59,11 +59,11 @@ export function Navbar({ user, student, currentSession = '2026-27', onRefresh, o
 
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-xs sm:text-base font-extrabold text-slate-900 tracking-tight truncate leading-tight">
+                <span className="text-xs sm:text-base font-extrabold text-slate-900 font-display tracking-tight truncate leading-tight">
                   <span className="hidden sm:inline">Department of Artificial Intelligence &amp; Machine Learning (AIML)</span>
                   <span className="sm:hidden">AIML Department</span>
                 </span>
-                <span className="hidden md:inline-flex bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-200/60 shrink-0">
+                <span className="hidden md:inline-flex bg-blue-50 text-blue-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200/80 shrink-0">
                   {currentSession}
                 </span>
               </div>
@@ -101,16 +101,16 @@ export function Navbar({ user, student, currentSession = '2026-27', onRefresh, o
                   onClick={user.role === 'student' && onOpenProfile ? onOpenProfile : undefined}
                   className={`text-right hidden sm:block ${user.role === 'student' && onOpenProfile ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
                 >
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate max-w-[140px]">
-                    {user.role === 'admin' ? 'Prof. HOD (Admin)' : student?.name || user.username}
+                  <div className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate max-w-[160px] font-display">
+                    {user.role === 'admin' ? 'Dr. / Prof. (HOD)' : student?.name || user.username}
                   </div>
-                  <div className="text-[11px] text-slate-500 flex items-center justify-end gap-1 font-medium">
+                  <div className="text-[11px] text-slate-500 flex items-center justify-end gap-1 font-semibold">
                     {user.role === 'admin' ? (
-                      <span className="text-blue-600 font-semibold flex items-center gap-0.5">
-                        <ShieldCheck className="w-3 h-3" /> Head of Dept
+                      <span className="text-blue-600 flex items-center gap-0.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-blue-600" /> Head of Department
                       </span>
                     ) : (
-                      <span className="text-emerald-700 font-semibold flex items-center gap-0.5">
+                      <span className="text-emerald-700 flex items-center gap-0.5">
                         <UserIcon className="w-3 h-3" /> {student?.roll_number}
                       </span>
                     )}
@@ -119,7 +119,11 @@ export function Navbar({ user, student, currentSession = '2026-27', onRefresh, o
 
                 <div
                   onClick={user.role === 'student' && onOpenProfile ? onOpenProfile : undefined}
-                  className={`w-8 sm:w-9 h-8 sm:h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs sm:text-sm ${user.role === 'student' && onOpenProfile ? 'cursor-pointer hover:border-blue-400' : ''}`}
+                  className={`w-8 sm:w-9 h-8 sm:h-9 rounded-xl ${
+                    user.role === 'admin'
+                      ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xs shadow-blue-500/25'
+                      : 'bg-slate-100 border border-slate-200 text-slate-700'
+                  } flex items-center justify-center font-black text-xs sm:text-sm ${user.role === 'student' && onOpenProfile ? 'cursor-pointer hover:border-blue-400' : ''}`}
                 >
                   {user.role === 'admin' ? 'HOD' : student?.name ? student.name[0] : 'S'}
                 </div>

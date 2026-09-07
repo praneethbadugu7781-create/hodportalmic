@@ -12,14 +12,15 @@ import { TaskCreateModal } from '@/components/admin/TaskCreateModal';
 import { BulkImportModal } from '@/components/admin/BulkImportModal';
 import { PromotionModal } from '@/components/admin/PromotionModal';
 import { StudentProfileModal } from '@/components/admin/StudentProfileModal';
+import { ConfirmDeleteModal } from '@/components/admin/ConfirmDeleteModal';
 import { Task } from '@/lib/types';
 import { useToast } from '@/components/ui/Toast';
-import { PlusCircle, Search, Filter, Archive, CheckCircle2, Clock, AlertTriangle, Eye } from 'lucide-react';
+import { PlusCircle, Search, Filter, Archive, CheckCircle2, Clock, AlertTriangle, Eye, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { error, info } = useToast();
+  const { success, error, info } = useToast();
 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,8 @@ export default function AdminDashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [stats, setStats] = useState<any>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
 
   // Modals
   const [showCreateTask, setShowCreateTask] = useState(false);
@@ -41,6 +44,31 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     checkAuthAndLoadData();
   }, []);
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+    setIsDeletingTask(true);
+    try {
+      const res = await fetch(`/api/tasks/${taskToDelete.id}?mode=permanent`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        success(data.message || `Task "${taskToDelete.title}" deleted.`);
+        setTaskToDelete(null);
+        if (selectedTaskId === taskToDelete.id) {
+          setSelectedTaskId(null);
+        }
+        await Promise.all([fetchTasks(true), fetchStats()]);
+      } else {
+        error(data.error || 'Failed to delete task');
+      }
+    } catch {
+      error('Failed to delete task');
+    } finally {
+      setIsDeletingTask(false);
+    }
+  };
 
   const checkAuthAndLoadData = async () => {
     try {
@@ -163,6 +191,10 @@ export default function AdminDashboardPage() {
                 selectedTaskId={selectedTaskId}
                 onSelectTask={(id) => setSelectedTaskId(id)}
                 onOpenStudentProfile={(id) => setActiveProfileStudentId(id)}
+                onTaskDeleted={() => {
+                  setSelectedTaskId(null);
+                  Promise.all([fetchTasks(true), fetchStats()]);
+                }}
               />
             </div>
           )}
@@ -172,14 +204,14 @@ export default function AdminDashboardPage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">Task Management</h2>
-                  <p className="text-xs text-slate-500">
-                    Create, edit, assign, and review department activities
+                  <h2 className="text-xl font-black text-slate-900 font-display">Task Management</h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Create, edit, assign, delete, and review department activities
                   </p>
                 </div>
                 <button
                   onClick={() => setShowCreateTask(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>Create Task</span>
@@ -191,28 +223,28 @@ export default function AdminDashboardPage() {
                 {tasks.map((task) => (
                   <div
                     key={task.id}
-                    className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4"
+                    className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4"
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                        <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-md">
                           {task.type.replace('_', ' ')}
                         </span>
                         <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                             task.priority === 'URGENT'
-                              ? 'bg-rose-100 text-rose-800'
+                              ? 'bg-rose-100 text-rose-800 border-rose-200'
                               : task.priority === 'HIGH'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-700'
+                              ? 'bg-amber-100 text-amber-800 border-amber-200'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                         >
                           {task.priority} Priority
                         </span>
                       </div>
 
-                      <h3 className="font-bold text-slate-900 text-base">{task.title}</h3>
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                      <h3 className="font-extrabold text-slate-900 text-base font-display">{task.title}</h3>
+                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-medium">
                         {task.description}
                       </p>
 
@@ -231,7 +263,7 @@ export default function AdminDashboardPage() {
                             style={{ width: `${task.completion_rate}%` }}
                           />
                         </div>
-                        <div className="flex justify-between text-[11px] text-slate-500 pt-0.5">
+                        <div className="flex justify-between text-[11px] text-slate-500 pt-0.5 font-medium">
                           <span>{task.total_assigned} Assigned</span>
                           <span className="text-emerald-600 font-semibold">{task.completed_count} Done</span>
                           <span className="text-amber-600 font-semibold">{task.pending_count} Pending</span>
@@ -239,15 +271,25 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => setTaskToDelete(task)}
+                        className="flex items-center gap-1.5 px-3 py-2 text-rose-600 hover:text-rose-800 hover:bg-rose-50 text-xs font-bold rounded-xl transition-colors cursor-pointer border border-rose-200/80 hover:border-rose-300"
+                        title="Delete Task"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+
                       <button
                         onClick={() => {
                           setSelectedTaskId(task.id);
                           setCurrentTab('dashboard');
                         }}
-                        className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-colors"
+                        className="flex items-center gap-1 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
                       >
-                        Track & Copy Roll Numbers →
+                        <span>Track & Copy Roll Numbers</span>
+                        <span>→</span>
                       </button>
                     </div>
                   </div>
@@ -344,6 +386,22 @@ export default function AdminDashboardPage() {
       <StudentProfileModal
         studentId={activeProfileStudentId}
         onClose={() => setActiveProfileStudentId(null)}
+        onStudentDeleted={() => {
+          fetchStats();
+          fetchTasks();
+        }}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!taskToDelete}
+        title="Delete Department Task"
+        itemName={taskToDelete ? `📌 ${taskToDelete.title}` : ''}
+        itemDescription={taskToDelete?.description}
+        warningText="Permanently deleting this task will remove the task, all assigned student records, and all uploaded proof files/submissions from MongoDB Atlas. This action cannot be undone."
+        confirmLabel="Yes, Delete Task"
+        isDeleting={isDeletingTask}
+        onConfirm={handleDeleteTask}
+        onClose={() => setTaskToDelete(null)}
       />
     </div>
   );

@@ -222,20 +222,38 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const mode = searchParams.get('mode') || 'permanent';
+
     const task = await Task.findById(taskId);
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    task.status = 'ARCHIVED';
-    task.updated_at = new Date();
-    await task.save();
+    if (mode === 'archive') {
+      task.status = 'ARCHIVED';
+      task.updated_at = new Date();
+      await task.save();
+      invalidateCache();
+      await logAdminAction(user.id, 'ARCHIVE_TASK', `Archived task: ${task.title}`);
+      return NextResponse.json({ success: true, message: 'Task archived successfully' });
+    }
+
+    // Permanent delete: task, assignments, and submissions
+    await Promise.all([
+      Task.findByIdAndDelete(taskId),
+      TaskAssignment.deleteMany({ task_id: taskId }),
+      Submission.deleteMany({ task_id: taskId }),
+    ]);
+
     invalidateCache();
+    await logAdminAction(user.id, 'DELETE_TASK', `Permanently deleted task: ${task.title}`);
 
-    await logAdminAction(user.id, 'ARCHIVE_TASK', `Archived task: ${task.title}`);
-
-    return NextResponse.json({ success: true, message: 'Task archived successfully' });
+    return NextResponse.json({
+      success: true,
+      message: `Task "${task.title}" and its submissions have been deleted successfully.`,
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to archive task' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to delete task' }, { status: 500 });
   }
 }

@@ -40,6 +40,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-outfit), var(--font-jakarta), sans-serif;
+  letter-spacing: -0.02em;
+}
+
 /* Glassmorphism surfaces */
 .glass-panel {
   background: rgba(255, 255, 255, 0.88);

@@ -17,10 +17,12 @@ import {
   Eye,
   Download,
   Share2,
+  Trash2,
 } from 'lucide-react';
 import { Task, TaskAssignment } from '@/lib/types';
 import { formatDate, formatFileSize, copyToClipboard } from '@/lib/utils';
 import { useToast } from '../ui/Toast';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface TaskTrackerProps {
   tasks: Task[];
@@ -28,6 +30,7 @@ interface TaskTrackerProps {
   tasksLoading?: boolean;
   onSelectTask: (taskId: number) => void;
   onOpenStudentProfile: (studentId: number) => void;
+  onTaskDeleted?: () => void;
 }
 
 export function TaskTracker({
@@ -36,6 +39,7 @@ export function TaskTracker({
   tasksLoading = false,
   onSelectTask,
   onOpenStudentProfile,
+  onTaskDeleted,
 }: TaskTrackerProps) {
   const { success, error, info } = useToast();
   const [activeTab, setActiveTab] = useState<'not_completed' | 'completed'>('not_completed');
@@ -43,6 +47,8 @@ export function TaskTracker({
   const [loading, setLoading] = useState(false);
   const [taskCache, setTaskCache] = useState<Record<number, any>>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [yearFilter, setYearFilter] = useState<string>('all');
 
@@ -90,6 +96,28 @@ export function TaskTracker({
       if (!isBackground) {
         setLoading(false);
       }
+    }
+  };
+
+  const handleDeleteActiveTask = async () => {
+    if (!activeTask) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/tasks/${activeTask.id}?mode=permanent`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        success(data.message || `Task "${activeTask.title}" permanently deleted.`);
+        setShowDeleteModal(false);
+        onTaskDeleted?.();
+      } else {
+        error(data.error || 'Failed to delete task');
+      }
+    } catch {
+      error('Failed to delete task');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -321,104 +349,117 @@ export function TaskTracker({
           </button>
         </div>
 
-        {/* CROWN JEWEL ACTIONS: Copy Pending Roll Numbers */}
-        {activeTab === 'not_completed' && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Primary Copy Button */}
-            <div className="relative inline-flex rounded-xl shadow-sm">
-              <button
-                onClick={() => handleCopyPending('newline', false)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2.5 rounded-l-xl font-bold text-sm transition-colors shadow-xs"
-              >
-                {copiedFormat === 'newline' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span>COPY ROLL NUMBERS ({notCompletedList.length})</span>
-              </button>
-
-              <div className="relative group">
+        {/* Top Actions Bar */}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {/* CROWN JEWEL ACTIONS: Copy Pending Roll Numbers */}
+          {activeTab === 'not_completed' && (
+            <>
+              {/* Primary Copy Button */}
+              <div className="relative inline-flex rounded-xl shadow-sm">
                 <button
-                  className="bg-blue-700 hover:bg-blue-800 text-white px-2.5 py-2.5 rounded-r-xl border-l border-blue-500 font-semibold text-sm transition-colors"
-                  title="More copy formats"
+                  onClick={() => handleCopyPending('newline', false)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2.5 rounded-l-xl font-bold text-sm transition-colors shadow-xs cursor-pointer"
                 >
-                  <ChevronDown className="w-4 h-4" />
+                  {copiedFormat === 'newline' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <span>COPY ROLL NUMBERS ({notCompletedList.length})</span>
                 </button>
 
-                <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 hidden group-hover:block z-30 animate-in fade-in duration-150">
-                  <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Copy Formats
+                <div className="relative group">
+                  <button
+                    className="bg-blue-700 hover:bg-blue-800 text-white px-2.5 py-2.5 rounded-r-xl border-l border-blue-500 font-semibold text-sm transition-colors cursor-pointer"
+                    title="More copy formats"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 hidden group-hover:block z-30 animate-in fade-in duration-150">
+                    <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      Copy Formats
+                    </div>
+                    <button
+                      onClick={() => handleCopyPending('newline', false)}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
+                    >
+                      <span>One per line (WhatsApp)</span>
+                      <span className="text-[11px] text-slate-400">6148\n6152</span>
+                    </button>
+                    <button
+                      onClick={() => handleCopyPending('comma', false)}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Comma-separated</span>
+                      <span className="text-[11px] text-slate-400">6148, 6152</span>
+                    </button>
+                    <button
+                      onClick={() => handleCopyPending('with_names', false)}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
+                    >
+                      <span>With Student Names</span>
+                      <span className="text-[11px] text-slate-400">6148 - Aarav</span>
+                    </button>
+                    <div className="border-t border-slate-100 my-1"></div>
+                    <button
+                      onClick={() => handleOpenReminderModal(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-indigo-700 hover:bg-indigo-50 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Copy Reminder Message</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleCopyPending('newline', false)}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between"
-                  >
-                    <span>One per line (WhatsApp)</span>
-                    <span className="text-[11px] text-slate-400">6148\n6152</span>
-                  </button>
-                  <button
-                    onClick={() => handleCopyPending('comma', false)}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between"
-                  >
-                    <span>Comma-separated</span>
-                    <span className="text-[11px] text-slate-400">6148, 6152</span>
-                  </button>
-                  <button
-                    onClick={() => handleCopyPending('with_names', false)}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between"
-                  >
-                    <span>With Student Names</span>
-                    <span className="text-[11px] text-slate-400">6148 - Aarav</span>
-                  </button>
-                  <div className="border-t border-slate-100 my-1"></div>
-                  <button
-                    onClick={() => handleOpenReminderModal(false)}
-                    className="w-full text-left px-4 py-2 text-sm text-indigo-700 hover:bg-indigo-50 font-semibold flex items-center gap-2"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Copy Reminder Message</span>
-                  </button>
                 </div>
               </div>
-            </div>
 
-            {/* Copy Selected if any checkbox is checked */}
-            {selectedStudentIds.length > 0 && (
+              {/* Copy Selected if any checkbox is checked */}
+              {selectedStudentIds.length > 0 && (
+                <button
+                  onClick={() => handleCopyPending('newline', true)}
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors animate-in fade-in cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Copy {selectedStudentIds.length} Selected</span>
+                </button>
+              )}
+
+              {/* Reminder composer modal trigger */}
               <button
-                onClick={() => handleCopyPending('newline', true)}
-                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors animate-in fade-in"
+                onClick={() => handleOpenReminderModal(false)}
+                className="flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm transition-colors cursor-pointer"
+                title="Compose reminder announcement"
               >
-                <Check className="w-4 h-4" />
-                <span>Copy {selectedStudentIds.length} Selected</span>
+                <Share2 className="w-4 h-4 text-slate-500" />
+                <span className="hidden sm:inline">Notice Template</span>
               </button>
-            )}
+            </>
+          )}
 
-            {/* Reminder composer modal trigger */}
-            <button
-              onClick={() => handleOpenReminderModal(false)}
-              className="flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm transition-colors cursor-pointer"
-              title="Compose reminder announcement"
-            >
-              <Share2 className="w-4 h-4 text-slate-500" />
-              <span className="hidden sm:inline">Notice Template</span>
-            </button>
+          {/* Export Task PDF Report */}
+          <button
+            onClick={async () => {
+              try {
+                const { exportTaskReportPdf } = await import('@/lib/pdf-export');
+                await exportTaskReportPdf(activeTask, completedList, notCompletedList);
+                success('Official Task Compliance PDF Report generated!');
+              } catch {
+                error('Failed to export PDF');
+              }
+            }}
+            className="flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer"
+            title="Download formal MIC Compliance PDF Report"
+          >
+            <Download className="w-4 h-4 text-rose-400" />
+            <span>Export PDF</span>
+          </button>
 
-            {/* Export Task PDF Report */}
-            <button
-              onClick={async () => {
-                try {
-                  const { exportTaskReportPdf } = await import('@/lib/pdf-export');
-                  await exportTaskReportPdf(activeTask, completedList, notCompletedList);
-                  success('Official Task Compliance PDF Report generated!');
-                } catch {
-                  error('Failed to export PDF');
-                }
-              }}
-              className="flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer"
-              title="Download formal MIC Compliance PDF Report"
-            >
-              <Download className="w-4 h-4 text-rose-400" />
-              <span>Export PDF</span>
-            </button>
-          </div>
-        )}
+          {/* Delete Task Button */}
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer"
+            title="Delete this task permanently"
+          >
+            <Trash2 className="w-4 h-4 text-rose-600" />
+            <span className="hidden sm:inline">Delete Task</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter & Search Bar inside Task */}
@@ -727,6 +768,19 @@ export function TaskTracker({
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Task Modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Department Task"
+        itemName={activeTask ? `📌 ${activeTask.title}` : ''}
+        itemDescription={activeTask?.description}
+        warningText="Permanently deleting this task will remove the task, all assigned student records, and all uploaded proof files/submissions from MongoDB Atlas. This action cannot be undone."
+        confirmLabel="Yes, Delete Task"
+        isDeleting={isDeleting}
+        onConfirm={handleDeleteActiveTask}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }

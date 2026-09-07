@@ -163,22 +163,48 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Invalid student ID' }, { status: 400 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const mode = searchParams.get('mode') || 'permanent';
+
     const student = await Student.findById(studentId);
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    student.status = 'DISABLED';
-    student.updated_at = new Date();
-    await student.save();
+    if (mode === 'disable') {
+      student.status = 'DISABLED';
+      student.updated_at = new Date();
+      await student.save();
 
-    await logAdminAction(user.id, 'DISABLE_STUDENT', `Disabled student account for ${student.roll_number} (${student.name})`);
+      await logAdminAction(user.id, 'DISABLE_STUDENT', `Disabled student account for ${student.roll_number} (${student.name})`);
+      invalidateCache('students_');
+      invalidateCache('analytics');
+
+      return NextResponse.json({ success: true, message: 'Student account has been disabled' });
+    }
+
+    // Permanent delete
+    const studentObjId = new mongoose.Types.ObjectId(studentId);
+    await Promise.all([
+      Student.findByIdAndDelete(studentId),
+      User.deleteOne({ student_id: studentObjId }),
+      TaskAssignment.deleteMany({ student_id: studentObjId }),
+      Submission.deleteMany({ student_id: studentObjId }),
+      AcademicHistory.deleteMany({ student_id: studentObjId }),
+    ]);
+
+    await logAdminAction(user.id, 'DELETE_STUDENT', `Permanently deleted student ${student.roll_number} (${student.name})`);
 
     invalidateCache('students_');
     invalidateCache('analytics');
+    invalidateCache('task_detail_');
+    invalidateCache('admin_tasks');
 
-    return NextResponse.json({ success: true, message: 'Student account has been disabled' });
+    return NextResponse.json({
+      success: true,
+      message: `Student ${student.roll_number} (${student.name}) deleted permanently.`,
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to disable student' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to delete student' }, { status: 500 });
   }
 }

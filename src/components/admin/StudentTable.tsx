@@ -15,9 +15,11 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import { Student } from '@/lib/types';
 import { useToast } from '../ui/Toast';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface StudentTableProps {
   onOpenStudentProfile: (studentId: number) => void;
@@ -36,6 +38,13 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
+  // Selection & Delete state
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [studentToDelete, setStudentToDelete] = useState<any | null>(null);
+  const [isDeletingStudent, setIsDeletingStudent] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
   // Add/Edit Student modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -49,6 +58,72 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
     department: 'Artificial Intelligence & Machine Learning',
     password: '',
   });
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedStudentIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllOnPage = () => {
+    const pageIds = students.map((s) => s.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedStudentIds.includes(id));
+    if (allSelected) {
+      setSelectedStudentIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedStudentIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!studentToDelete) return;
+    setIsDeletingStudent(true);
+    try {
+      const res = await fetch(`/api/students/${studentToDelete.id}?mode=permanent`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        success(data.message || `Student ${studentToDelete.roll_number} deleted.`);
+        setStudentToDelete(null);
+        setSelectedStudentIds((prev) => prev.filter((id) => id !== studentToDelete.id));
+        fetchStudents();
+        onRefreshStats?.();
+      } else {
+        error(data.error || 'Failed to delete student');
+      }
+    } catch {
+      error('Failed to delete student');
+    } finally {
+      setIsDeletingStudent(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedStudentIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await fetch('/api/students/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentIds: selectedStudentIds }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        success(data.message || `Deleted ${selectedStudentIds.length} students.`);
+        setSelectedStudentIds([]);
+        setShowBulkDeleteModal(false);
+        fetchStudents();
+        onRefreshStats?.();
+      } else {
+        error(data.error || 'Failed to delete students');
+      }
+    } catch {
+      error('Failed to delete students');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   useEffect(() => {
     fetchStudents();
@@ -245,6 +320,16 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {selectedStudentIds.length > 0 && (
+            <button
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl text-xs font-black transition-all shadow-xs cursor-pointer animate-in fade-in"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Selected ({selectedStudentIds.length})</span>
+            </button>
+          )}
+
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
@@ -266,7 +351,7 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
               resetForm();
               setShowAddModal(true);
             }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
             <span>Add Student</span>
@@ -346,7 +431,16 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
         ) : (
           <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                <th className="py-3 px-4 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={students.length > 0 && students.every((s) => selectedStudentIds.includes(s.id))}
+                    onChange={handleSelectAllOnPage}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    title="Select all on this page"
+                  />
+                </th>
                 <th className="py-3 px-4">Roll Number</th>
                 <th className="py-3 px-4">Student Details</th>
                 <th className="py-3 px-4">Year & Section</th>
@@ -362,21 +456,35 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
                 const pending = s.pending_tasks_count || 0;
                 const overdue = s.overdue_tasks_count || 0;
                 const rate = totalAssigned > 0 ? Math.round((completed / totalAssigned) * 100) : 0;
+                const isSelected = selectedStudentIds.includes(s.id);
 
                 return (
-                  <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr
+                    key={s.id}
+                    className={`transition-colors ${
+                      isSelected ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-slate-50/80'
+                    }`}
+                  >
+                    <td className="py-3 px-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelect(s.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="py-3 px-4">
-                      <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-md text-xs">
+                      <span className="font-mono font-black text-slate-900 bg-slate-100/90 border border-slate-200/80 px-2.5 py-1 rounded-md text-xs shadow-2xs">
                         {s.roll_number}
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900">{s.name}</div>
-                      <div className="text-xs text-slate-500">{s.email}</div>
+                      <div className="font-extrabold text-slate-900 text-sm font-display">{s.name}</div>
+                      <div className="text-xs text-slate-500 font-medium">{s.email}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="text-xs font-semibold text-slate-800">{s.year}</div>
-                      <div className="text-[11px] font-bold text-blue-700 bg-blue-50 inline-block px-1.5 py-0.5 rounded-sm mt-0.5">
+                      <div className="text-xs font-bold text-slate-800">{s.year}</div>
+                      <div className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-100 inline-block px-2 py-0.5 rounded-md mt-0.5">
                         Sec {s.section}
                       </div>
                     </td>
@@ -388,22 +496,22 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
                             style={{ width: `${rate}%` }}
                           />
                         </div>
-                        <span className="text-xs font-bold text-slate-700">{rate}%</span>
+                        <span className="text-xs font-bold text-slate-800">{rate}%</span>
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
-                        <span className="text-emerald-600 font-semibold">{completed} Done</span>
+                      <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 font-medium">
+                        <span className="text-emerald-600 font-bold">{completed} Done</span>
                         <span>•</span>
-                        <span className="text-amber-600 font-semibold">{pending + overdue} Pending</span>
+                        <span className="text-amber-600 font-bold">{pending + overdue} Pending</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <span
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
                           s.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : s.status === 'DISABLED'
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                            : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                         }`}
                       >
                         {s.status}
@@ -413,7 +521,7 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => onOpenStudentProfile(s.id)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                           title="View Profile & History"
                         >
                           <Eye className="w-4 h-4" />
@@ -421,7 +529,7 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
 
                         <button
                           onClick={() => openEdit(s)}
-                          className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           title="Edit Student"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -429,9 +537,9 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
 
                         <button
                           onClick={() => handleToggleStatus(s)}
-                          className={`p-1.5 rounded-lg transition-colors ${
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             s.status === 'ACTIVE'
-                              ? 'text-rose-500 hover:bg-rose-50'
+                              ? 'text-amber-600 hover:bg-amber-50'
                               : 'text-emerald-600 hover:bg-emerald-50'
                           }`}
                           title={s.status === 'ACTIVE' ? 'Disable Account' : 'Enable Account'}
@@ -441,6 +549,14 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
                           ) : (
                             <UserCheck className="w-4 h-4" />
                           )}
+                        </button>
+
+                        <button
+                          onClick={() => setStudentToDelete(s)}
+                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Permanently Delete Student"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -625,6 +741,32 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
           </div>
         </div>
       )}
+
+      {/* Single Student Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!studentToDelete}
+        title="Delete Student Account"
+        itemName={studentToDelete ? `👤 ${studentToDelete.roll_number} - ${studentToDelete.name}` : ''}
+        itemDescription={`${studentToDelete?.year} • Section ${studentToDelete?.section} • ${studentToDelete?.email}`}
+        warningText="Permanently deleting this student will remove their profile, user credentials, and all their task submission history from MongoDB Atlas. This action cannot be undone."
+        confirmLabel="Yes, Delete Student"
+        isDeleting={isDeletingStudent}
+        onConfirm={handleDeleteStudent}
+        onClose={() => setStudentToDelete(null)}
+      />
+
+      {/* Bulk Delete Students Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={showBulkDeleteModal}
+        title="Bulk Delete Students"
+        itemName={`🗑️ ${selectedStudentIds.length} Students Selected`}
+        itemDescription={`Permanently removing ${selectedStudentIds.length} students from the department database.`}
+        warningText={`This will permanently delete all ${selectedStudentIds.length} selected students, their login accounts, and all submitted proofs from MongoDB Atlas. This cannot be undone.`}
+        confirmLabel={`Yes, Delete ${selectedStudentIds.length} Students`}
+        isDeleting={isBulkDeleting}
+        onConfirm={handleBulkDelete}
+        onClose={() => setShowBulkDeleteModal(false)}
+      />
     </div>
   );
 }
