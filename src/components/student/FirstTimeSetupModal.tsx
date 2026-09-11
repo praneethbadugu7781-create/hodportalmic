@@ -64,8 +64,8 @@ export function FirstTimeSetupModal({ student, onComplete }: FirstTimeSetupModal
     if (e) e.preventDefault();
     const cleanEmail = collegeEmail.trim().toLowerCase();
 
-    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      error('Please enter a valid email address');
+    if (!cleanEmail || !cleanEmail.endsWith('@mictech.edu.in')) {
+      error('Only official college email (@mictech.edu.in) is allowed. Personal emails are not permitted.');
       return;
     }
 
@@ -294,16 +294,16 @@ export function FirstTimeSetupModal({ student, onComplete }: FirstTimeSetupModal
               <div className="space-y-1">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <Mail className="w-5 h-5 text-emerald-600" />
-                  Enter Email Address
+                  Official College Email Verification
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Provide your email address (personal Gmail or official college email). A 6-digit one-time verification code will be sent to this address.
+                  Enter your official institutional college email ending with <span className="font-semibold text-slate-800 font-mono">@mictech.edu.in</span>. A 6-digit OTP verification code will be sent to your student inbox.
                 </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Your Email Address (Gmail or College ID)
+                  Official College Email (@mictech.edu.in)
                 </label>
                 <div className="relative">
                   <input
@@ -311,13 +311,14 @@ export function FirstTimeSetupModal({ student, onComplete }: FirstTimeSetupModal
                     required
                     value={collegeEmail}
                     onChange={(e) => setCollegeEmail(e.target.value)}
-                    placeholder="yourname@gmail.com or rollno@mictech.edu.in"
+                    placeholder="your-rollno@mictech.edu.in"
                     className="w-full pl-4 pr-10 py-3 rounded-2xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-hidden transition-all shadow-xs"
                   />
                   <Mail className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1.5">
-                  Make sure you have access to this inbox to receive your verification code
+                <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Must end with <span className="font-mono font-semibold text-emerald-800">@mictech.edu.in</span> (personal emails are not permitted)
                 </p>
               </div>
 

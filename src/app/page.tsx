@@ -155,7 +155,7 @@ export default function LoginPage() {
                 First Time Logging In?
               </div>
               <p className="text-[11px] text-emerald-700 leading-relaxed">
-                Enter your <span className="font-semibold text-emerald-900">Roll Number</span> as both username and password. You will be prompted to verify your email with a one-time OTP and set your personal password.
+                Enter your <span className="font-semibold text-emerald-900">Roll Number</span> as both username and password. You will be prompted to verify your official college email (<code className="bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded font-mono text-[10px]">@mictech.edu.in</code>) with an OTP and set your personal password.
               </p>
             </div>
           )}

@@ -31,9 +31,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid email format. Please enter a valid email address.' }, { status: 400 });
     }
 
-    // Allow any valid email (college or personal)
-    // Optional institutional check can be logged without blocking students
-    const isCollegeDomain = cleanEmail.endsWith('@mictech.edu.in');
+    // Strictly require official college domain
+    if (!cleanEmail.endsWith('@mictech.edu.in')) {
+      return NextResponse.json(
+        { error: 'Only official college email addresses ending with @mictech.edu.in are allowed.' },
+        { status: 400 }
+      );
+    }
 
     // Ensure email is not already taken by another user
     const userObjectId = new mongoose.Types.ObjectId(user.id);
