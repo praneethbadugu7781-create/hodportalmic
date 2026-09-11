@@ -79,7 +79,7 @@ export function TimetableManager() {
   const fetchTimetable = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/timetable?year=${encodeURIComponent(selectedYear)}&section=${selectedSection}`);
+      const res = await fetch(`/api/timetable?year=${encodeURIComponent(selectedYear)}&section=${selectedSection}&_t=${Date.now()}`);
       const data = await res.json();
       if (res.ok && data.timetable) {
         const tt = data.timetable;

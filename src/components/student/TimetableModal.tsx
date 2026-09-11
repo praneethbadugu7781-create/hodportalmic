@@ -45,7 +45,7 @@ export function TimetableModal({ isOpen, onClose, year, section }: TimetableModa
   const fetchTimetable = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/timetable');
+      const res = await fetch(`/api/timetable?_t=${Date.now()}`);
       const data = await res.json();
       if (res.ok && data.timetable) {
         setTimetable(data.timetable);

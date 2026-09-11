@@ -37,7 +37,7 @@ export function TodayScheduleWidget({ onOpenFullTimetable, year, section }: Toda
 
   const fetchTimetable = async () => {
     try {
-      const res = await fetch('/api/timetable');
+      const res = await fetch(`/api/timetable?_t=${Date.now()}`);
       const data = await res.json();
       if (res.ok && data.timetable) {
         setTimetable(data.timetable);
@@ -58,9 +58,29 @@ export function TodayScheduleWidget({ onOpenFullTimetable, year, section }: Toda
     );
   }
 
-  // If no timetable published yet
+  // If no timetable published yet, show friendly standby card
   if (!timetable || !Array.isArray(timetable.schedule)) {
-    return null;
+    return (
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="p-2.5 rounded-2xl bg-slate-100 text-slate-500">
+            <CalendarDays className="w-5 h-5" />
+          </span>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Class Timetable</h3>
+            <p className="text-xs text-slate-500">
+              Department timetable for {year || 'your year'} (Section {section || 'A'}) is being updated.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onOpenFullTimetable}
+          className="self-start sm:self-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+        >
+          View Schedule
+        </button>
+      </div>
+    );
   }
 
   // Determine current day name (e.g. 'Monday', 'Friday', 'Sunday')
