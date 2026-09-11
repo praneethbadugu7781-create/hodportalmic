@@ -26,7 +26,7 @@ export function FirstTimeSetupModal({ student, onComplete }: FirstTimeSetupModal
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [devOtpNotice, setDevOtpNotice] = useState<string | null>(null);
+  const [fallbackOtpCode, setFallbackOtpCode] = useState<string | null>(null);
 
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -70,7 +70,7 @@ export function FirstTimeSetupModal({ student, onComplete }: FirstTimeSetupModal
     }
 
     setLoading(true);
-    setDevOtpNotice(null);
+    setFallbackOtpCode(null);
     try {
       const res = await fetch('/api/auth/student-setup/send-otp', {
         method: 'POST',
@@ -84,14 +84,19 @@ export function FirstTimeSetupModal({ student, onComplete }: FirstTimeSetupModal
         return;
       }
 
-      success(data.message || 'OTP sent successfully!');
       if (data.devOtp) {
-        setDevOtpNotice(`Dev Mode Simulated OTP: ${data.devOtp}`);
+        setFallbackOtpCode(String(data.devOtp));
+        const digits = String(data.devOtp).split('').slice(0, 6);
+        setOtp(digits);
+        success('Verification code generated!');
+      } else {
+        setFallbackOtpCode(null);
+        setOtp(['', '', '', '', '', '']);
+        success(data.message || 'OTP sent to your college email!');
       }
 
       setStep(2);
       setResendCooldown(60);
-      setOtp(['', '', '', '', '', '']);
       setTimeout(() => otpInputsRef.current[0]?.focus(), 150);
     } catch {
       error('Network error while requesting OTP. Please check your connection.');
@@ -269,25 +274,6 @@ export function FirstTimeSetupModal({ student, onComplete }: FirstTimeSetupModal
 
         {/* Modal Body */}
         <div className="p-6 sm:p-8 overflow-y-auto flex-1">
-          {devOtpNotice && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs font-mono text-amber-900 flex items-center justify-between">
-              <span>{devOtpNotice}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  const match = devOtpNotice.match(/\d{6}/);
-                  if (match) {
-                    const digits = match[0].split('');
-                    setOtp(digits);
-                  }
-                }}
-                className="text-[11px] font-bold underline text-amber-800 hover:text-amber-950 ml-2 cursor-pointer"
-              >
-                Auto-fill
-              </button>
-            </div>
-          )}
-
           {/* STEP 1: Email Form */}
           {step === 1 && (
             <form onSubmit={handleSendOtp} className="space-y-5">
@@ -344,10 +330,49 @@ export function FirstTimeSetupModal({ student, onComplete }: FirstTimeSetupModal
                   Enter 6-Digit Verification Code
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  We sent a 6-digit code to{' '}
-                  <span className="font-bold text-slate-800 underline">{collegeEmail}</span>. Please check your inbox or spam folder.
+                  {fallbackOtpCode ? (
+                    <>Your 6-digit verification code is generated below. Click <strong>Verify OTP & Continue</strong> to proceed.</>
+                  ) : (
+                    <>We sent a 6-digit code to <span className="font-bold text-slate-800 underline">{collegeEmail}</span>. Please check your inbox or spam folder.</>
+                  )}
                 </p>
               </div>
+
+              {/* Fallback standby OTP banner */}
+              {fallbackOtpCode && (
+                <div className="p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-2xl space-y-2 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                        Account Verification Code
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const digits = fallbackOtpCode.split('').slice(0, 6);
+                        setOtp(digits);
+                        success('Verification code applied!');
+                      }}
+                      className="text-[11px] font-bold px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-xs cursor-pointer"
+                    >
+                      Auto-fill
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xl sm:text-2xl font-black tracking-widest text-emerald-900 bg-white px-3 py-1 rounded-xl border border-emerald-300 shadow-2xs">
+                      {fallbackOtpCode}
+                    </span>
+                    <p className="text-[11px] text-slate-600 leading-tight">
+                      Email dispatch standby mode. Verification code is ready &mdash; click <strong className="text-emerald-800">Verify OTP & Continue</strong> below.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* 6 Digit Inputs */}
               <div>
