@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@paper-design/shaders": "^0.0.80",
     "@types/pdf-parse": "^1.1.5",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
