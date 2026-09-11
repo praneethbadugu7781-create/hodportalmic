@@ -48,6 +48,8 @@ interface StudentDashboardViewProps {
   };
   isProfileOpen?: boolean;
   showProfileModal?: boolean;
+  onOpenProfile?: () => void;
+  onOpenProfileModal?: () => void;
   onCloseProfile?: () => void;
   onCloseProfileModal?: () => void;
 }
@@ -57,6 +59,8 @@ export function StudentDashboardView({
   student,
   isProfileOpen: externalProfileOpen,
   showProfileModal,
+  onOpenProfile,
+  onOpenProfileModal,
   onCloseProfile: externalCloseProfile,
   onCloseProfileModal,
 }: StudentDashboardViewProps) {
@@ -69,13 +73,20 @@ export function StudentDashboardView({
   const [internalProfileOpen, setInternalProfileOpen] = useState(false);
   const [showTimetableModal, setShowTimetableModal] = useState(false);
 
-  const isProfileOpen =
-    externalProfileOpen !== undefined
-      ? externalProfileOpen
-      : showProfileModal !== undefined
-      ? showProfileModal
-      : internalProfileOpen;
-  const handleCloseProfile = externalCloseProfile || onCloseProfileModal || (() => setInternalProfileOpen(false));
+  // Profile modal is open if external prop is true OR internal state is true
+  const isProfileOpen = Boolean(externalProfileOpen || showProfileModal || internalProfileOpen);
+
+  const handleOpenProfile = () => {
+    setInternalProfileOpen(true);
+    if (onOpenProfile) onOpenProfile();
+    if (onOpenProfileModal) onOpenProfileModal();
+  };
+
+  const handleCloseProfile = () => {
+    setInternalProfileOpen(false);
+    if (externalCloseProfile) externalCloseProfile();
+    if (onCloseProfileModal) onCloseProfileModal();
+  };
 
   const fetchStudentTasks = async () => {
     try {
@@ -140,7 +151,7 @@ export function StudentDashboardView({
               <span>{student?.year} ({student?.section})</span>
             </div>
             <button
-              onClick={() => setInternalProfileOpen(true)}
+              onClick={handleOpenProfile}
               className="inline-flex items-center gap-1.5 bg-blue-500/30 hover:bg-blue-500/50 text-white text-xs font-bold px-3 py-1 rounded-full border border-blue-400/30 transition-colors cursor-pointer"
             >
               <User className="w-3.5 h-3.5" />

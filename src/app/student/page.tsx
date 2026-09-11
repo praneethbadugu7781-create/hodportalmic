@@ -63,6 +63,7 @@ export default function StudentPage() {
         <StudentDashboardView
           student={student}
           showProfileModal={showProfile}
+          onOpenProfileModal={() => setShowProfile(true)}
           onCloseProfileModal={() => setShowProfile(false)}
         />
       </main>
