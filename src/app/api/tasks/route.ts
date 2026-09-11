@@ -68,23 +68,32 @@ export async function GET(req: NextRequest) {
       query.status = status;
     }
 
-    const [rawTasks, allAssignments] = await Promise.all([
+    const [rawTasks, assignmentAgg] = await Promise.all([
       Task.find(query).sort({ created_at: -1 }).lean(),
-      TaskAssignment.find().select('task_id status').lean(),
+      TaskAssignment.aggregate([
+        {
+          $group: {
+            _id: '$task_id',
+            total: { $sum: 1 },
+            completed: { $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] } },
+            pending: { $sum: { $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0] } },
+            overdue: { $sum: { $cond: [{ $eq: ['$status', 'OVERDUE'] }, 1, 0] } },
+          },
+        },
+      ]),
     ]);
 
     const assignmentsByTask = new Map<string, { total: number; completed: number; pending: number; overdue: number }>();
 
-    for (const a of allAssignments) {
-      const tId = a.task_id.toString();
-      if (!assignmentsByTask.has(tId)) {
-        assignmentsByTask.set(tId, { total: 0, completed: 0, pending: 0, overdue: 0 });
+    for (const a of assignmentAgg) {
+      if (a._id) {
+        assignmentsByTask.set(a._id.toString(), {
+          total: a.total || 0,
+          completed: a.completed || 0,
+          pending: a.pending || 0,
+          overdue: a.overdue || 0,
+        });
       }
-      const stats = assignmentsByTask.get(tId)!;
-      stats.total++;
-      if (a.status === 'COMPLETED') stats.completed++;
-      else if (a.status === 'PENDING') stats.pending++;
-      else if (a.status === 'OVERDUE') stats.overdue++;
     }
 
     const tasks = rawTasks.map((t) => {
@@ -103,7 +112,7 @@ export async function GET(req: NextRequest) {
     });
 
     const responseData = { tasks };
-    setCached(cacheKey, responseData, 15);
+    setCached(cacheKey, responseData, 20);
 
     return NextResponse.json(responseData);
   } catch (error: any) {

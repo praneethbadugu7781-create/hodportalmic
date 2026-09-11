@@ -26,6 +26,8 @@ const UserSchema = new Schema<IUser>({
   college_email_verified: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
 });
+UserSchema.index({ email: 1 });
+UserSchema.index({ role: 1 });
 
 // Student Schema
 export interface IStudent extends Document {
@@ -99,6 +101,8 @@ const TaskSchema = new Schema<ITask>({
   updated_at: { type: Date, default: Date.now },
 });
 TaskSchema.index({ status: 1, deadline: 1 });
+TaskSchema.index({ status: 1, created_at: -1 });
+TaskSchema.index({ created_at: -1 });
 
 // TaskAssignment Schema
 export interface ITaskAssignment extends Document {
@@ -177,8 +181,9 @@ const AuditLogSchema = new Schema<IAuditLog>({
   admin_name: { type: String, default: 'Admin' },
   action: { type: String, required: true },
   details: { type: String, required: true },
-  created_at: { type: Date, default: Date.now },
+  created_at: { type: Date, default: Date.now, index: true },
 });
+AuditLogSchema.index({ created_at: -1 });
 
 export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Student: Model<IStudent> = mongoose.models.Student || mongoose.model<IStudent>('Student', StudentSchema);

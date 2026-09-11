@@ -43,7 +43,29 @@ export default function AdminDashboardPage() {
   const [showAdminProfile, setShowAdminProfile] = useState(false);
   const [activeProfileStudentId, setActiveProfileStudentId] = useState<number | null>(null);
 
+  // Immediate instant-load from session cache (0ms delay)
   useEffect(() => {
+    try {
+      const cachedUser = sessionStorage.getItem('hod_user');
+      const cachedStats = sessionStorage.getItem('hod_stats');
+      const cachedTasks = sessionStorage.getItem('hod_tasks');
+      if (cachedUser) {
+        setUser(JSON.parse(cachedUser));
+        setLoading(false);
+      }
+      if (cachedStats) {
+        setStats(JSON.parse(cachedStats));
+        setStatsLoading(false);
+      }
+      if (cachedTasks) {
+        const parsed = JSON.parse(cachedTasks);
+        setTasks(parsed);
+        if (parsed.length > 0) setSelectedTaskId(parsed[0].id);
+        setTasksLoading(false);
+      }
+    } catch {
+      // ignore
+    }
     checkAuthAndLoadData();
   }, []);
 
@@ -74,7 +96,13 @@ export default function AdminDashboardPage() {
 
   const checkAuthAndLoadData = async () => {
     try {
-      const meRes = await fetch('/api/auth/me');
+      // Fire auth, tasks, and stats concurrently in parallel
+      const [meRes, tasksRes, statsRes] = await Promise.all([
+        fetch('/api/auth/me'),
+        fetch('/api/tasks'),
+        fetch('/api/analytics'),
+      ]);
+
       const meData = await meRes.json();
 
       if (!meRes.ok || !meData.authenticated) {
@@ -89,9 +117,31 @@ export default function AdminDashboardPage() {
 
       setUser(meData.user);
       setLoading(false);
-      // Fetch tasks and stats in parallel without blocking UI
-      fetchTasks();
-      fetchStats();
+      try {
+        sessionStorage.setItem('hod_user', JSON.stringify(meData.user));
+      } catch {}
+
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        const loadedTasks = tasksData.tasks || [];
+        setTasks(loadedTasks);
+        setTasksLoading(false);
+        if (loadedTasks.length > 0) {
+          setSelectedTaskId((prev) => (prev ? prev : loadedTasks[0].id));
+        }
+        try {
+          sessionStorage.setItem('hod_tasks', JSON.stringify(loadedTasks));
+        } catch {}
+      }
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData.summary);
+        setStatsLoading(false);
+        try {
+          sessionStorage.setItem('hod_stats', JSON.stringify(statsData.summary));
+        } catch {}
+      }
     } catch {
       router.push('/');
       setLoading(false);
@@ -104,9 +154,13 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/tasks');
       const data = await res.json();
       if (res.ok) {
-        setTasks(data.tasks || []);
-        if (data.tasks?.length > 0) {
-          setSelectedTaskId((prev) => (prev ? prev : data.tasks[0].id));
+        const loadedTasks = data.tasks || [];
+        setTasks(loadedTasks);
+        try {
+          sessionStorage.setItem('hod_tasks', JSON.stringify(loadedTasks));
+        } catch {}
+        if (loadedTasks.length > 0) {
+          setSelectedTaskId((prev) => (prev ? prev : loadedTasks[0].id));
         }
       }
     } catch {
@@ -123,6 +177,9 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (res.ok) {
         setStats(data.summary);
+        try {
+          sessionStorage.setItem('hod_stats', JSON.stringify(data.summary));
+        } catch {}
       }
     } catch {
       // ignore
@@ -143,8 +200,31 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400 text-sm">
-        Authenticating Department Administration...
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        {/* Skeleton Header */}
+        <header className="bg-white/95 border-b border-slate-200 h-16 sm:h-20 flex items-center px-4 sm:px-8 justify-between">
+          <div className="flex items-center gap-3 animate-pulse">
+            <div className="w-10 h-10 bg-slate-200 rounded-xl"></div>
+            <div className="space-y-1.5">
+              <div className="h-4 w-48 bg-slate-200 rounded"></div>
+              <div className="h-3 w-32 bg-slate-100 rounded"></div>
+            </div>
+          </div>
+          <div className="h-9 w-24 bg-slate-200 rounded-xl animate-pulse"></div>
+        </header>
+
+        {/* Skeleton Content */}
+        <div className="flex-1 flex max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 gap-6 animate-pulse">
+          <div className="hidden lg:block w-64 h-96 bg-white rounded-2xl border border-slate-200"></div>
+          <div className="flex-1 space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-28 bg-white rounded-2xl border border-slate-200 p-4"></div>
+              ))}
+            </div>
+            <div className="h-64 bg-white rounded-2xl border border-slate-200"></div>
+          </div>
+        </div>
       </div>
     );
   }

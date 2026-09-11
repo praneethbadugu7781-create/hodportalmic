@@ -69,7 +69,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           select: 'roll_number name email phone year section',
         })
         .lean(),
-      Submission.find({ task_id: taskId }).lean(),
+      Submission.find({ task_id: taskId })
+        .select('student_id response file_url file_name file_size submitted_at')
+        .lean(),
     ]);
 
     const subMap = new Map<string, any>();
@@ -157,9 +159,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       },
     };
 
-    setCached(cacheKey, responseData, 15);
+    setCached(cacheKey, responseData, 25);
 
-    return NextResponse.json(responseData);
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': 'private, no-cache, no-transform',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching task details:', error);
     return NextResponse.json({ error: 'Failed to fetch task details' }, { status: 500 });

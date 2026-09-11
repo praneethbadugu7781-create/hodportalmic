@@ -28,92 +28,163 @@ export async function GET(req: NextRequest) {
 
     await connectToDatabase();
 
-    // Parallel counts & data retrieval
-    const [
-      totalStudents,
-      totalGraduated,
-      totalDisabled,
-      totalActiveTasks,
-      activeStudents,
-      activeTasks,
-      allAssignments,
-      recentActivity,
-    ] = await Promise.all([
-      Student.countDocuments({ status: 'ACTIVE' }),
-      Student.countDocuments({ status: 'GRADUATED' }),
-      Student.countDocuments({ status: 'DISABLED' }),
-      Task.countDocuments({ status: 'ACTIVE' }),
-      Student.find({ status: 'ACTIVE' }).select('year section').lean(),
-      Task.find({ status: 'ACTIVE' }).select('title type priority deadline status').sort({ created_at: -1 }).lean(),
-      TaskAssignment.find().select('task_id student_id status').lean(),
-      AuditLog.find().sort({ created_at: -1 }).limit(10).lean(),
+    // Run 4 optimized, database-level aggregations & projections concurrently
+    const [studentStats, activeTasks, assignmentAgg, recentActivity] = await Promise.all([
+      // 1. Single aggregation for all student status, year, and section counts
+      Student.aggregate([
+        {
+          $group: {
+            _id: { status: '$status', year: '$year', section: '$section' },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+
+      // 2. Fast lean projection for active tasks
+      Task.find({ status: 'ACTIVE' })
+        .select('title type priority deadline status created_at')
+        .sort({ created_at: -1 })
+        .lean(),
+
+      // 3. Database-level aggregation for assignment performance breakdown
+      TaskAssignment.aggregate([
+        {
+          $lookup: {
+            from: 'students',
+            localField: 'student_id',
+            foreignField: '_id',
+            as: 'student',
+          },
+        },
+        { $unwind: { path: '$student', preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: {
+              taskId: '$task_id',
+              year: '$student.year',
+              section: '$student.section',
+              status: '$status',
+            },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+
+      // 4. Fast indexed query for recent audit logs
+      AuditLog.find()
+        .select('action admin_name details created_at')
+        .sort({ created_at: -1 })
+        .limit(10)
+        .lean(),
     ]);
 
-    const totalAssigned = allAssignments.length;
-    const totalCompleted = allAssignments.filter((a) => a.status === 'COMPLETED').length;
-    const totalPending = allAssignments.filter((a) => a.status === 'PENDING').length;
-    const totalOverdue = allAssignments.filter((a) => a.status === 'OVERDUE').length;
-    const overallCompletionRate = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
+    // Parse student counts by status, year, section
+    let totalStudents = 0;
+    let totalGraduated = 0;
+    let totalDisabled = 0;
+    const studentsByYear: Record<string, number> = { '2nd Year': 0, '3rd Year': 0, 'Final Year': 0 };
+    const studentsBySection: Record<string, number> = { 'A': 0, 'B': 0, 'C': 0 };
 
-    // Student ID sets by year and section
-    const studentIdsByYear = new Map<string, Set<string>>();
-    const studentIdsBySection = new Map<string, Set<string>>();
-
-    for (const s of activeStudents) {
-      const sId = s._id.toString();
-      if (!studentIdsByYear.has(s.year)) studentIdsByYear.set(s.year, new Set());
-      studentIdsByYear.get(s.year)!.add(sId);
-
-      if (!studentIdsBySection.has(s.section)) studentIdsBySection.set(s.section, new Set());
-      studentIdsBySection.get(s.section)!.add(sId);
+    for (const s of studentStats) {
+      const { status, year, section } = s._id || {};
+      const count = s.count || 0;
+      if (status === 'ACTIVE') {
+        totalStudents += count;
+        if (year && studentsByYear[year] !== undefined) studentsByYear[year] += count;
+        if (section && studentsBySection[section] !== undefined) studentsBySection[section] += count;
+      } else if (status === 'GRADUATED') {
+        totalGraduated += count;
+      } else if (status === 'DISABLED') {
+        totalDisabled += count;
+      }
     }
 
-    const yearStats = ['2nd Year', '3rd Year', 'Final Year'].map((yearName) => {
-      const yIds = studentIdsByYear.get(yearName) || new Set();
-      const yAssignments = allAssignments.filter((a) => yIds.has(a.student_id.toString()));
-      const assigned = yAssignments.length;
-      const comp = yAssignments.filter((a) => a.status === 'COMPLETED').length;
-      const pend = yAssignments.filter((a) => a.status === 'PENDING').length;
-      const over = yAssignments.filter((a) => a.status === 'OVERDUE').length;
+    // Parse assignment breakdown in O(1)
+    let totalAssigned = 0;
+    let totalCompleted = 0;
+    let totalPending = 0;
+    let totalOverdue = 0;
 
+    const yearData: Record<string, { assigned: number; completed: number; pending: number; overdue: number }> = {
+      '2nd Year': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
+      '3rd Year': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
+      'Final Year': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
+    };
+
+    const sectionData: Record<string, { assigned: number; completed: number; pending: number; overdue: number }> = {
+      'A': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
+      'B': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
+      'C': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
+    };
+
+    const taskStatsMap = new Map<string, { total: number; completed: number; pending: number; overdue: number }>();
+
+    for (const item of assignmentAgg) {
+      const { taskId, year, section, status } = item._id || {};
+      const count = item.count || 0;
+
+      totalAssigned += count;
+      if (status === 'COMPLETED') totalCompleted += count;
+      else if (status === 'PENDING') totalPending += count;
+      else if (status === 'OVERDUE') totalOverdue += count;
+
+      if (year && yearData[year]) {
+        yearData[year].assigned += count;
+        if (status === 'COMPLETED') yearData[year].completed += count;
+        else if (status === 'PENDING') yearData[year].pending += count;
+        else if (status === 'OVERDUE') yearData[year].overdue += count;
+      }
+
+      if (section && sectionData[section]) {
+        sectionData[section].assigned += count;
+        if (status === 'COMPLETED') sectionData[section].completed += count;
+        else if (status === 'PENDING') sectionData[section].pending += count;
+        else if (status === 'OVERDUE') sectionData[section].overdue += count;
+      }
+
+      if (taskId) {
+        const tIdStr = taskId.toString();
+        if (!taskStatsMap.has(tIdStr)) {
+          taskStatsMap.set(tIdStr, { total: 0, completed: 0, pending: 0, overdue: 0 });
+        }
+        const tStats = taskStatsMap.get(tIdStr)!;
+        tStats.total += count;
+        if (status === 'COMPLETED') tStats.completed += count;
+        else if (status === 'PENDING') tStats.pending += count;
+        else if (status === 'OVERDUE') tStats.overdue += count;
+      }
+    }
+
+    const overallCompletionRate = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
+
+    const yearStats = ['2nd Year', '3rd Year', 'Final Year'].map((yearName) => {
+      const y = yearData[yearName] || { assigned: 0, completed: 0, pending: 0, overdue: 0 };
       return {
         year: yearName,
-        totalStudents: yIds.size,
-        totalAssigned: assigned,
-        completed: comp,
-        pending: pend,
-        overdue: over,
-        completionRate: assigned > 0 ? Math.round((comp / assigned) * 100) : 0,
+        totalStudents: studentsByYear[yearName] || 0,
+        totalAssigned: y.assigned,
+        completed: y.completed,
+        pending: y.pending,
+        overdue: y.overdue,
+        completionRate: y.assigned > 0 ? Math.round((y.completed / y.assigned) * 100) : 0,
       };
     });
 
     const sectionStats = ['A', 'B', 'C'].map((secName) => {
-      const secIds = studentIdsBySection.get(secName) || new Set();
-      const secAssignments = allAssignments.filter((a) => secIds.has(a.student_id.toString()));
-      const assigned = secAssignments.length;
-      const comp = secAssignments.filter((a) => a.status === 'COMPLETED').length;
-      const pend = secAssignments.filter((a) => a.status === 'PENDING').length;
-      const over = secAssignments.filter((a) => a.status === 'OVERDUE').length;
-
+      const s = sectionData[secName] || { assigned: 0, completed: 0, pending: 0, overdue: 0 };
       return {
         section: secName,
-        totalStudents: secIds.size,
-        totalAssigned: assigned,
-        completed: comp,
-        pending: pend,
-        overdue: over,
-        completionRate: assigned > 0 ? Math.round((comp / assigned) * 100) : 0,
+        totalStudents: studentsBySection[secName] || 0,
+        totalAssigned: s.assigned,
+        completed: s.completed,
+        pending: s.pending,
+        overdue: s.overdue,
+        completionRate: s.assigned > 0 ? Math.round((s.completed / s.assigned) * 100) : 0,
       };
     });
 
-    // Active Task Performance
-    const taskPerformance = activeTasks.map((t) => {
-      const tAssignments = allAssignments.filter((a) => a.task_id.toString() === t._id.toString());
-      const assigned = tAssignments.length;
-      const comp = tAssignments.filter((a) => a.status === 'COMPLETED').length;
-      const pend = tAssignments.filter((a) => a.status === 'PENDING').length;
-      const over = tAssignments.filter((a) => a.status === 'OVERDUE').length;
-
+    const taskPerformance = activeTasks.map((t: any) => {
+      const tStats = taskStatsMap.get(t._id.toString()) || { total: 0, completed: 0, pending: 0, overdue: 0 };
       return {
         id: t._id.toString(),
         title: t.title,
@@ -121,11 +192,11 @@ export async function GET(req: NextRequest) {
         priority: t.priority,
         deadline: t.deadline,
         status: t.status,
-        total_assigned: assigned,
-        completed: comp,
-        pending: pend,
-        overdue: over,
-        completion_rate: assigned > 0 ? Math.round((comp / assigned) * 100) : 0,
+        total_assigned: tStats.total,
+        completed: tStats.completed,
+        pending: tStats.pending,
+        overdue: tStats.overdue,
+        completion_rate: tStats.total > 0 ? Math.round((tStats.completed / tStats.total) * 100) : 0,
       };
     });
 
@@ -134,7 +205,7 @@ export async function GET(req: NextRequest) {
         totalStudents,
         totalGraduated,
         totalDisabled,
-        totalActiveTasks,
+        totalActiveTasks: activeTasks.length,
         totalAssigned,
         totalCompleted,
         totalPending,
@@ -147,10 +218,13 @@ export async function GET(req: NextRequest) {
       recentActivity: recentActivity.map((l: any) => ({ ...l, id: l._id.toString() })),
     };
 
-    setCached(cacheKey, result, 15); // 15-second TTL cache
+    setCached(cacheKey, result, 20); // 20-second TTL cache
 
     return NextResponse.json(result, {
-      headers: { 'X-Cache': 'MISS' }
+      headers: {
+        'X-Cache': 'MISS',
+        'Cache-Control': 'private, no-cache, no-transform',
+      },
     });
   } catch (error: any) {
     console.error('Analytics error:', error);
