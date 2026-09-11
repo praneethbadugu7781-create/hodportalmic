@@ -218,3 +218,33 @@ OtpVerificationSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
 export const OtpVerification: Model<IOtpVerification> =
   mongoose.models.OtpVerification || mongoose.model<IOtpVerification>('OtpVerification', OtpVerificationSchema);
 
+// Announcement Schema
+export interface IAnnouncement extends Document {
+  title: string;
+  content: string;
+  priority: 'INFO' | 'IMPORTANT' | 'URGENT';
+  target_year: string;
+  target_section: string;
+  is_active: boolean;
+  posted_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+const AnnouncementSchema = new Schema<IAnnouncement>({
+  title: { type: String, required: true, trim: true },
+  content: { type: String, required: true, trim: true },
+  priority: { type: String, enum: ['INFO', 'IMPORTANT', 'URGENT'], default: 'INFO' },
+  target_year: { type: String, default: 'all' },
+  target_section: { type: String, default: 'all' },
+  is_active: { type: Boolean, default: true, index: true },
+  posted_by: { type: String, default: 'Dr. Head of Department, AIML' },
+  created_at: { type: Date, default: Date.now, index: true },
+  updated_at: { type: Date, default: Date.now },
+});
+AnnouncementSchema.index({ is_active: 1, created_at: -1 });
+
+export const Announcement: Model<IAnnouncement> =
+  mongoose.models.Announcement || mongoose.model<IAnnouncement>('Announcement', AnnouncementSchema);
+
+

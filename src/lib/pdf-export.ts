@@ -303,3 +303,208 @@ export async function exportTaskReportPdf(
 
   doc.save(`MIC_AIML_Task_Report_${task.title?.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`);
 }
+
+export interface SubmissionReceiptData {
+  student: {
+    roll_number: string;
+    name: string;
+    year: string;
+    section: string;
+    department?: string;
+    email?: string;
+  };
+  task: {
+    id: string | number;
+    title: string;
+    description?: string;
+    type: string;
+    deadline: string | Date;
+  };
+  submission: {
+    response?: string | null;
+    file_url?: string | null;
+    file_name?: string | null;
+    submitted_at?: string | Date | null;
+    completed_at?: string | Date | null;
+  };
+}
+
+/**
+ * Generates an Official Departmental Student Submission Receipt & Acknowledgment Pass
+ */
+export async function exportSubmissionReceiptPdf(data: SubmissionReceiptData) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const logoBase64 = await getBase64ImageFromUrl('/logo-mic.png');
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  // Top Deep Blue Brand Accent Bar
+  doc.setFillColor(14, 59, 156);
+  doc.rect(0, 0, pageWidth, 6, 'F');
+
+  // Embed Logo Image
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', 14, 12, 44, 15);
+    } catch {}
+  }
+
+  // Header Titles
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(14, 59, 156);
+  doc.text('DVR & Dr. HS MIC College of Technology', pageWidth - 14, 16, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(71, 85, 105);
+  doc.text('(Autonomous Institution | Approved by AICTE, Affiliated to JNTUK)', pageWidth - 14, 21, { align: 'right' });
+  doc.text('Department of Artificial Intelligence & Machine Learning (AIML)', pageWidth - 14, 26, { align: 'right' });
+
+  // Divider Line
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, 32, pageWidth - 14, 32);
+
+  // Receipt Title Banner
+  doc.setFillColor(241, 245, 249);
+  doc.roundedRect(14, 36, pageWidth - 28, 14, 2, 2, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42);
+  doc.text('OFFICIAL SUBMISSION RECEIPT & ACKNOWLEDGMENT PASS', pageWidth / 2, 45, { align: 'center' });
+
+  const refNumber = `MIC-AIML-${String(data.task.id).slice(-6).toUpperCase()}-${data.student.roll_number}`;
+  const submittedDate = formatDate(data.submission.completed_at || data.submission.submitted_at || new Date());
+
+  // Verified Badge Card
+  doc.setFillColor(236, 253, 245);
+  doc.setDrawColor(16, 185, 129);
+  doc.roundedRect(14, 54, pageWidth - 28, 18, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(4, 120, 87);
+  doc.text('✓ STATUS: COMPLETED & VERIFIED ON DEPT SYSTEM', 20, 62);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(15, 118, 110);
+  doc.text(`Acknowledgment Ref: ${refNumber}  |  Submitted On: ${submittedDate}`, 20, 68);
+
+  // Student Information Section
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Student Identification', 14, 80);
+
+  autoTable(doc, {
+    startY: 83,
+    head: [['Roll Number', 'Full Name', 'Academic Year & Section', 'Department']],
+    body: [
+      [
+        data.student.roll_number,
+        data.student.name,
+        `${data.student.year} (Section ${data.student.section})`,
+        data.student.department || 'Artificial Intelligence & Machine Learning',
+      ],
+    ],
+    theme: 'plain',
+    styles: { fontSize: 9, cellPadding: 3, textColor: [30, 41, 59] },
+    headStyles: { fillColor: [248, 250, 252], textColor: [71, 85, 105], fontStyle: 'bold' },
+    margin: { left: 14, right: 14 },
+  });
+
+  const finalY1 = (doc as any).lastAutoTable.finalY || 105;
+
+  // Task & Submission Details Section
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Submission & Compliance Particulars', 14, finalY1 + 10);
+
+  const proofValue = data.submission.file_name
+    ? `File Uploaded: ${data.submission.file_name}`
+    : data.submission.file_url
+    ? 'File Proof Verified'
+    : data.submission.response || 'Confirmed / Completed';
+
+  autoTable(doc, {
+    startY: finalY1 + 13,
+    body: [
+      ['Activity / Task Title', data.task.title],
+      ['Activity Type', data.task.type.replace('_', ' ')],
+      ['Assigned Deadline', formatDate(data.task.deadline)],
+      ['Submission Response / Proof', proofValue],
+      ['Compliance State', 'COMPLETED (Requirements Satisfied)'],
+      ['Digital Record ID', refNumber],
+    ],
+    theme: 'grid',
+    styles: { fontSize: 8.5, cellPadding: 3, textColor: [30, 41, 59] },
+    columnStyles: {
+      0: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 60 },
+      1: { cellWidth: pageWidth - 28 - 60 },
+    },
+    margin: { left: 14, right: 14 },
+  });
+
+  const finalY2 = (doc as any).lastAutoTable.finalY || 180;
+
+  // Notice Note Box
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(14, finalY2 + 8, pageWidth - 28, 22, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text('NOTICE & VERIFICATION POLICY:', 18, finalY2 + 14);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    'This electronic receipt is computer-generated proof of submission stored securely on the AIML Department Repository.',
+    18,
+    finalY2 + 19
+  );
+  doc.text(
+    'Students may present this slip to class coordinators or faculty incharge as authentic confirmation of task compliance.',
+    18,
+    finalY2 + 24
+  );
+
+  // Official Signature Block
+  const sigY = finalY2 + 45;
+
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, sigY + 12, 65, sigY + 12);
+  doc.line(pageWidth - 75, sigY + 12, pageWidth - 14, sigY + 12);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(51, 65, 85);
+  doc.text('Student Signature / Acknowledgment', 14, sigY + 17);
+  doc.text('Head of Department (AIML)', pageWidth - 14, sigY + 17, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Roll No: ${data.student.roll_number}`, 14, sigY + 21);
+  doc.text('DVR & Dr. HS MIC College of Technology', pageWidth - 14, sigY + 21, { align: 'right' });
+
+  // Footer
+  const footerY = pageHeight - 10;
+  doc.setFontSize(7.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text(
+    `DVR & Dr. HS MIC College of Technology • AIML Dept. • Generated on ${new Date().toLocaleString()}`,
+    pageWidth / 2,
+    footerY,
+    { align: 'center' }
+  );
+
+  doc.save(`MIC_AIML_Receipt_${data.student.roll_number}_${data.task.id}.pdf`);
+}
+

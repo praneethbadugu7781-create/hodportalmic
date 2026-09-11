@@ -12,9 +12,10 @@ import {
   PlusCircle,
   Upload,
   ShieldCheck,
+  Megaphone,
 } from 'lucide-react';
 
-export type AdminTab = 'dashboard' | 'tasks' | 'students' | 'promotion' | 'analytics' | 'archived' | 'audit';
+export type AdminTab = 'dashboard' | 'tasks' | 'students' | 'announcements' | 'promotion' | 'analytics' | 'archived' | 'audit';
 
 interface AdminSidebarProps {
   currentTab: AdminTab;
@@ -41,6 +42,7 @@ export function AdminSidebar({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tasks', label: 'Tasks & Tracking', icon: CheckSquare, badge: counts?.activeTasks },
     { id: 'students', label: 'Student Directory', icon: Users, badge: counts?.totalStudents },
+    { id: 'announcements', label: 'Noticeboard', icon: Megaphone },
     { id: 'promotion', label: 'Promotion', icon: GraduationCap },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'archived', label: 'Archive', icon: Archive },

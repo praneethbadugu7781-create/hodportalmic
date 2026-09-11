@@ -5,11 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(dateString?: string | null): string {
+export function formatDate(dateString?: string | Date | null): string {
   if (!dateString) return 'N/A';
   try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString;
+    const d = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    if (isNaN(d.getTime())) return String(dateString);
     return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -18,22 +18,22 @@ export function formatDate(dateString?: string | null): string {
       minute: '2-digit',
     });
   } catch {
-    return dateString;
+    return String(dateString);
   }
 }
 
-export function formatDateShort(dateString?: string | null): string {
+export function formatDateShort(dateString?: string | Date | null): string {
   if (!dateString) return 'N/A';
   try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString;
+    const d = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    if (isNaN(d.getTime())) return String(dateString);
     return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
   } catch {
-    return dateString;
+    return String(dateString);
   }
 }
 

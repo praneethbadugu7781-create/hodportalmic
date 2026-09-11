@@ -14,6 +14,7 @@ import { PromotionModal } from '@/components/admin/PromotionModal';
 import { StudentProfileModal } from '@/components/admin/StudentProfileModal';
 import { ConfirmDeleteModal } from '@/components/admin/ConfirmDeleteModal';
 import { AdminProfileModal } from '@/components/admin/AdminProfileModal';
+import { AnnouncementManager } from '@/components/admin/AnnouncementManager';
 import { Task } from '@/lib/types';
 import { useToast } from '@/components/ui/Toast';
 import { PlusCircle, Search, Filter, Archive, CheckCircle2, Clock, AlertTriangle, Eye, Trash2 } from 'lucide-react';
@@ -468,6 +469,11 @@ export default function AdminDashboardPage() {
                 fetchTasks();
               }}
             />
+          )}
+
+          {/* TAB: DEPARTMENT NOTICEBOARD / ANNOUNCEMENTS */}
+          {currentTab === 'announcements' && (
+            <AnnouncementManager />
           )}
 
           {/* TAB 4: ACADEMIC PROMOTION */}

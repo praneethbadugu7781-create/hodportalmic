@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Student } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
+import { SubmissionReceiptModal } from './SubmissionReceiptModal';
 
 interface StudentProfileDetailModalProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ export const StudentProfileDetailModal: React.FC<StudentProfileDetailModalProps>
   student,
   tasks = [],
 }) => {
+  const [selectedTaskForReceipt, setSelectedTaskForReceipt] = React.useState<any | null>(null);
+
   if (!isOpen || !student) return null;
 
   const totalAssigned = tasks.length;
@@ -188,6 +191,15 @@ export const StudentProfileDetailModal: React.FC<StudentProfileDetailModalProps>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setSelectedTaskForReceipt(t)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                        title="View Submission Receipt"
+                      >
+                        <Award className="w-3 h-3 text-indigo-600" />
+                        <span>Receipt</span>
+                      </button>
+
                       {t.submission_file_url && (
                         <a
                           href={t.submission_file_url}
@@ -220,6 +232,14 @@ export const StudentProfileDetailModal: React.FC<StudentProfileDetailModalProps>
           </button>
         </div>
       </div>
+
+      {/* Official Submission Receipt Modal */}
+      <SubmissionReceiptModal
+        isOpen={!!selectedTaskForReceipt}
+        onClose={() => setSelectedTaskForReceipt(null)}
+        student={student}
+        task={selectedTaskForReceipt}
+      />
     </div>
   );
 };

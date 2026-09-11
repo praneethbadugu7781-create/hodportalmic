@@ -15,12 +15,15 @@ import {
   ShieldCheck,
   User,
   Sparkles,
+  Award,
 } from 'lucide-react';
 import { Task, TaskAssignment } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '../ui/Toast';
 import { TaskSubmitModal } from './TaskSubmitModal';
 import { StudentProfileDetailModal } from './StudentProfileDetailModal';
+import { AnnouncementBanner } from './AnnouncementBanner';
+import { SubmissionReceiptModal } from './SubmissionReceiptModal';
 
 interface StudentDashboardViewProps {
   user?: {
@@ -60,6 +63,7 @@ export function StudentDashboardView({
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'completed' | 'overdue'>('all');
   const [activeTaskForSubmit, setActiveTaskForSubmit] = useState<any | null>(null);
+  const [selectedTaskForReceipt, setSelectedTaskForReceipt] = useState<any | null>(null);
   const [internalProfileOpen, setInternalProfileOpen] = useState(false);
 
   const isProfileOpen =
@@ -165,6 +169,9 @@ export function StudentDashboardView({
           </div>
         </div>
       </div>
+
+      {/* Official Department Announcement Noticeboard */}
+      <AnnouncementBanner />
 
       {/* KPI Filter Cards - Responsive 2x2 on Mobile */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -311,18 +318,29 @@ export function StudentDashboardView({
                       <span className="text-[11px] sm:text-xs text-emerald-700 font-medium">
                         Submitted: {formatDate(task.completed_at || task.submission_submitted_at)}
                       </span>
-                      {task.submission_file_url && (
-                        <a
-                          href={task.submission_file_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-xl transition-colors"
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => setSelectedTaskForReceipt(task)}
+                          className="flex items-center gap-1 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl transition-all shadow-2xs cursor-pointer"
+                          title="Official submission acknowledgment receipt & pass"
                         >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>View Proof</span>
-                          <ExternalLink className="w-3 h-3 ml-0.5" />
-                        </a>
-                      )}
+                          <Award className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Receipt Slip</span>
+                        </button>
+
+                        {task.submission_file_url && (
+                          <a
+                            href={task.submission_file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-xl transition-colors"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>View Proof</span>
+                            <ExternalLink className="w-3 h-3 ml-0.5" />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -363,6 +381,14 @@ export function StudentDashboardView({
         onClose={handleCloseProfile}
         student={student}
         tasks={tasks}
+      />
+
+      {/* Official Submission Receipt Modal */}
+      <SubmissionReceiptModal
+        isOpen={!!selectedTaskForReceipt}
+        onClose={() => setSelectedTaskForReceipt(null)}
+        student={student}
+        task={selectedTaskForReceipt}
       />
     </div>
   );
