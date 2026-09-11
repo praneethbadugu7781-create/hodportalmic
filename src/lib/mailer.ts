@@ -20,15 +20,15 @@ export async function sendOtpEmail({
   rollNumber,
   otp,
 }: SendOtpOptions): Promise<SendOtpResult> {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-  const from = process.env.SMTP_FROM || `"AIML Department - MIC Tech" <${user || 'no-reply@mictech.edu.in'}>`;
+  const host = process.env.SMTP_HOST?.trim();
+  const port = parseInt(process.env.SMTP_PORT?.trim() || '465', 10);
+  const user = process.env.SMTP_USER?.trim();
+  // Automatically strip all spaces from Google app password (e.g. 'jtay sbyz somu gdyr' -> 'jtaysbyzsomugdyr')
+  const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '').trim() : undefined;
+  const from = process.env.SMTP_FROM?.trim() || `"DVR & Dr. HS MIC College of Technology" <${user || 'no-reply@mictech.edu.in'}>`;
 
   // Fallback mode if SMTP credentials are not yet configured in .env.local
-  if (!host || !user || !pass) {
+  if (!user || !pass) {
     console.log('\n======================================================');
     console.log(`[DEVELOPER NOTICE: EMAIL OTP SIMULATION]`);
     console.log(`To: ${toEmail} (${studentName} - ${rollNumber})`);
@@ -44,15 +44,21 @@ export async function sendOtpEmail({
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      tls: {
-        rejectUnauthorized: process.env.NODE_ENV === 'production',
-      },
-    });
+    const isGmail = host === 'smtp.gmail.com' || (user && user.endsWith('@gmail.com'));
+    const transporter = isGmail
+      ? nodemailer.createTransport({
+          service: 'gmail',
+          auth: { user, pass },
+        })
+      : nodemailer.createTransport({
+          host: host || 'smtp.gmail.com',
+          port,
+          secure: port === 465,
+          auth: { user, pass },
+          tls: {
+            rejectUnauthorized: false,
+          },
+        });
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -109,9 +115,13 @@ export async function sendOtpEmail({
     };
   } catch (error: any) {
     console.error('Failed to send OTP email via SMTP:', error);
+    let errMsg = error.message || 'Failed to dispatch verification email';
+    if (errMsg.includes('534') || errMsg.includes('accounts.google.com')) {
+      errMsg = 'Google security blocked sign-in from cloud server. Please open https://accounts.google.com/DisplayUnlockCaptcha in your browser while signed into micaimlhodportal@gmail.com and click "Continue".';
+    }
     return {
       success: false,
-      error: error.message || 'Failed to dispatch verification email',
+      error: errMsg,
     };
   }
 }
