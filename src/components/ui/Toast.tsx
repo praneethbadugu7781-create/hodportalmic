@@ -53,27 +53,52 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none px-4">
+      {/* Top-Middle Executive Floating Notification System */}
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2.5 max-w-md sm:max-w-lg w-full pointer-events-none px-4">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-center justify-between p-4 rounded-xl shadow-lg border backdrop-blur-md transition-all animate-in fade-in slide-in-from-bottom-3 duration-200 ${
+            className={`pointer-events-auto flex items-center justify-between gap-3.5 px-4 sm:px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl transition-all duration-300 transform animate-in fade-in slide-in-from-top-4 zoom-in-95 w-full ${
               t.type === 'success'
-                ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                ? 'bg-white/95 text-slate-900 border-emerald-500/30 shadow-emerald-950/10 ring-1 ring-emerald-500/20'
                 : t.type === 'error'
-                ? 'bg-rose-50 text-rose-900 border-rose-200'
-                : 'bg-slate-900 text-white border-slate-800'
+                ? 'bg-white/95 text-slate-900 border-rose-500/30 shadow-rose-950/10 ring-1 ring-rose-500/20'
+                : 'bg-slate-900/95 text-white border-slate-700/60 shadow-slate-950/20 ring-1 ring-white/10'
             }`}
           >
-            <div className="flex items-center gap-3">
-              {t.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
-              {t.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />}
-              {t.type === 'info' && <Info className="w-5 h-5 text-blue-400 shrink-0" />}
-              <span className="text-sm font-medium leading-snug">{t.message}</span>
+            <div className="flex items-center gap-3 min-w-0">
+              {t.type === 'success' && (
+                <span className="p-1.5 rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-500/30 shrink-0">
+                  <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                </span>
+              )}
+              {t.type === 'error' && (
+                <span className="p-1.5 rounded-xl bg-rose-500 text-white shadow-md shadow-rose-500/30 shrink-0">
+                  <AlertCircle className="w-5 h-5 stroke-[2.5]" />
+                </span>
+              )}
+              {t.type === 'info' && (
+                <span className="p-1.5 rounded-xl bg-blue-500 text-white shadow-md shadow-blue-500/30 shrink-0">
+                  <Info className="w-5 h-5 stroke-[2.5]" />
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className={`text-xs sm:text-sm font-bold tracking-tight leading-snug truncate ${
+                  t.type === 'success' ? 'text-emerald-950' : t.type === 'error' ? 'text-rose-950' : 'text-slate-100'
+                }`}>
+                  {t.message}
+                </p>
+              </div>
             </div>
             <button
+              type="button"
               onClick={() => removeToast(t.id)}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 hover:text-slate-800 shrink-0 ml-2"
+              className={`p-1.5 rounded-xl transition-colors shrink-0 cursor-pointer ${
+                t.type === 'info'
+                  ? 'text-slate-400 hover:text-white hover:bg-white/10'
+                  : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+              }`}
+              title="Dismiss notification"
             >
               <X className="w-4 h-4" />
             </button>
