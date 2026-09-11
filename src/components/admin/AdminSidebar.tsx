@@ -13,9 +13,10 @@ import {
   Upload,
   ShieldCheck,
   Megaphone,
+  CalendarDays,
 } from 'lucide-react';
 
-export type AdminTab = 'dashboard' | 'tasks' | 'students' | 'announcements' | 'promotion' | 'analytics' | 'archived' | 'audit';
+export type AdminTab = 'dashboard' | 'tasks' | 'students' | 'timetable' | 'announcements' | 'promotion' | 'analytics' | 'archived' | 'audit';
 
 interface AdminSidebarProps {
   currentTab: AdminTab;
@@ -42,6 +43,7 @@ export function AdminSidebar({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tasks', label: 'Tasks & Tracking', icon: CheckSquare, badge: counts?.activeTasks },
     { id: 'students', label: 'Student Directory', icon: Users, badge: counts?.totalStudents },
+    { id: 'timetable', label: 'Timetable', icon: CalendarDays },
     { id: 'announcements', label: 'Noticeboard', icon: Megaphone },
     { id: 'promotion', label: 'Promotion', icon: GraduationCap },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },

@@ -247,4 +247,76 @@ AnnouncementSchema.index({ is_active: 1, created_at: -1 });
 export const Announcement: Model<IAnnouncement> =
   mongoose.models.Announcement || mongoose.model<IAnnouncement>('Announcement', AnnouncementSchema);
 
+// Timetable Schema
+export interface ITimetablePeriod {
+  period_number: number;
+  start_time: string;
+  end_time: string;
+  subject_code?: string;
+  subject_name: string;
+  faculty_name?: string;
+  room_number?: string;
+  is_lab?: boolean;
+}
+
+export interface ITimetableDay {
+  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+  periods: ITimetablePeriod[];
+}
+
+export interface ITimetable extends Document {
+  year: '2nd Year' | '3rd Year' | 'Final Year';
+  section: 'A' | 'B';
+  department: string;
+  academic_session: string;
+  semester?: string;
+  image_url?: string | null;
+  schedule: ITimetableDay[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+const TimetablePeriodSchema = new Schema<ITimetablePeriod>(
+  {
+    period_number: { type: Number, required: true },
+    start_time: { type: String, required: true, trim: true },
+    end_time: { type: String, required: true, trim: true },
+    subject_code: { type: String, default: null, trim: true },
+    subject_name: { type: String, required: true, trim: true },
+    faculty_name: { type: String, default: null, trim: true },
+    room_number: { type: String, default: null, trim: true },
+    is_lab: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const TimetableDaySchema = new Schema<ITimetableDay>(
+  {
+    day: {
+      type: String,
+      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      required: true,
+    },
+    periods: [TimetablePeriodSchema],
+  },
+  { _id: false }
+);
+
+const TimetableSchema = new Schema<ITimetable>({
+  year: { type: String, enum: ['2nd Year', '3rd Year', 'Final Year'], required: true, index: true },
+  section: { type: String, enum: ['A', 'B'], required: true, index: true },
+  department: { type: String, default: 'Artificial Intelligence & Machine Learning' },
+  academic_session: { type: String, default: '2026-27' },
+  semester: { type: String, default: 'II-I' },
+  image_url: { type: String, default: null },
+  schedule: [TimetableDaySchema],
+  created_at: { type: Date, default: Date.now },
+  updated_at: { type: Date, default: Date.now },
+});
+
+TimetableSchema.index({ year: 1, section: 1, academic_session: 1 }, { unique: true });
+
+export const Timetable: Model<ITimetable> =
+  mongoose.models.Timetable || mongoose.model<ITimetable>('Timetable', TimetableSchema);
+
 

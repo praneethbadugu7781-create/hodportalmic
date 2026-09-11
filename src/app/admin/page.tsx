@@ -15,6 +15,7 @@ import { StudentProfileModal } from '@/components/admin/StudentProfileModal';
 import { ConfirmDeleteModal } from '@/components/admin/ConfirmDeleteModal';
 import { AdminProfileModal } from '@/components/admin/AdminProfileModal';
 import { AnnouncementManager } from '@/components/admin/AnnouncementManager';
+import { TimetableManager } from '@/components/admin/TimetableManager';
 import { Task } from '@/lib/types';
 import { useToast } from '@/components/ui/Toast';
 import { PlusCircle, Search, Filter, Archive, CheckCircle2, Clock, AlertTriangle, Eye, Trash2 } from 'lucide-react';
@@ -469,6 +470,11 @@ export default function AdminDashboardPage() {
                 fetchTasks();
               }}
             />
+          )}
+
+          {/* TAB: CLASS TIMETABLE MANAGER */}
+          {currentTab === 'timetable' && (
+            <TimetableManager />
           )}
 
           {/* TAB: DEPARTMENT NOTICEBOARD / ANNOUNCEMENTS */}

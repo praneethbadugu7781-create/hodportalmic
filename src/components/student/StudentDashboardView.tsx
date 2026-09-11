@@ -24,6 +24,8 @@ import { TaskSubmitModal } from './TaskSubmitModal';
 import { StudentProfileDetailModal } from './StudentProfileDetailModal';
 import { AnnouncementBanner } from './AnnouncementBanner';
 import { SubmissionReceiptModal } from './SubmissionReceiptModal';
+import { TodayScheduleWidget } from './TodayScheduleWidget';
+import { TimetableModal } from './TimetableModal';
 
 interface StudentDashboardViewProps {
   user?: {
@@ -65,6 +67,7 @@ export function StudentDashboardView({
   const [activeTaskForSubmit, setActiveTaskForSubmit] = useState<any | null>(null);
   const [selectedTaskForReceipt, setSelectedTaskForReceipt] = useState<any | null>(null);
   const [internalProfileOpen, setInternalProfileOpen] = useState(false);
+  const [showTimetableModal, setShowTimetableModal] = useState(false);
 
   const isProfileOpen =
     externalProfileOpen !== undefined
@@ -172,6 +175,13 @@ export function StudentDashboardView({
 
       {/* Official Department Announcement Noticeboard */}
       <AnnouncementBanner />
+
+      {/* Today's Live Class Schedule Widget */}
+      <TodayScheduleWidget
+        onOpenFullTimetable={() => setShowTimetableModal(true)}
+        year={student?.year}
+        section={student?.section}
+      />
 
       {/* KPI Filter Cards - Responsive 2x2 on Mobile */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -389,6 +399,14 @@ export function StudentDashboardView({
         onClose={() => setSelectedTaskForReceipt(null)}
         student={student}
         task={selectedTaskForReceipt}
+      />
+
+      {/* Official Department Timetable Modal */}
+      <TimetableModal
+        isOpen={showTimetableModal}
+        onClose={() => setShowTimetableModal(false)}
+        year={student?.year}
+        section={student?.section}
       />
     </div>
   );
