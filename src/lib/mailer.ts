@@ -10,9 +10,7 @@ export interface SendOtpOptions {
 export interface SendOtpResult {
   success: boolean;
   messageId?: string;
-  isDevFallback?: boolean;
   error?: string;
-  fallbackOtp?: string;
 }
 
 export async function sendOtpEmail({
@@ -28,20 +26,11 @@ export async function sendOtpEmail({
   const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '').trim() : undefined;
   const from = process.env.SMTP_FROM?.trim() || `"DVR & Dr. HS MIC College of Technology" <${user || 'no-reply@mictech.edu.in'}>`;
 
-  // Fallback mode if SMTP credentials are not yet configured in .env.local
   if (!user || !pass) {
-    console.log('\n======================================================');
-    console.log(`[DEVELOPER NOTICE: EMAIL OTP SIMULATION]`);
-    console.log(`To: ${toEmail} (${studentName} - ${rollNumber})`);
-    console.log(`One-Time Password (OTP): ${otp}`);
-    console.log(`Expires in: 10 minutes`);
-    console.log(`Configure SMTP_HOST, SMTP_USER, SMTP_PASS in .env.local for live email delivery.`);
-    console.log('======================================================\n');
-
+    console.error('SMTP credentials are missing. Configure SMTP_USER and SMTP_PASS in .env.local.');
     return {
-      success: true,
-      isDevFallback: true,
-      fallbackOtp: otp,
+      success: false,
+      error: 'SMTP mail service is not configured. Please contact the department administrator.',
     };
   }
 
@@ -113,23 +102,16 @@ export async function sendOtpEmail({
     return {
       success: true,
       messageId: info.messageId,
-      isDevFallback: false,
     };
   } catch (error: any) {
-    console.warn('\n======================================================');
-    console.warn('[MAILER NOTICE: SMTP DISPATCH FAILED - FALLBACK ACTIVE]');
-    console.warn(`Reason: ${error?.message || error}`);
-    console.warn(`Recipient: ${toEmail} (${studentName} - ${rollNumber})`);
-    console.warn(`Verification OTP: ${otp}`);
-    console.warn('Action: Providing direct fallback OTP so student is not blocked.');
-    console.warn('To enable live email delivery, update SMTP_PASS in .env.local and Vercel.');
-    console.warn('======================================================\n');
-
+    console.error('Failed to send OTP email via SMTP:', error);
+    let errMsg = error?.message || 'Failed to dispatch verification email';
+    if (errMsg.includes('535') || errMsg.includes('BadCredentials')) {
+      errMsg = 'Email service authentication failed. Please update the Gmail App Password in your department settings.';
+    }
     return {
-      success: true,
-      isDevFallback: true,
-      fallbackOtp: otp,
-      error: error?.message || 'SMTP delivery failed',
+      success: false,
+      error: errMsg,
     };
   }
 }

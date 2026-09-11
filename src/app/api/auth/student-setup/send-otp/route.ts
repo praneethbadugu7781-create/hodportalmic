@@ -91,16 +91,21 @@ export async function POST(req: NextRequest) {
       otp,
     });
 
-    const isFallback = Boolean(mailResult.isDevFallback || !mailResult.success);
+    if (!mailResult.success) {
+      return NextResponse.json(
+        {
+          error:
+            mailResult.error ||
+            'Unable to deliver verification email to your college inbox. Please contact the department HOD or administrator.',
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: isFallback
-        ? `Verification code generated for ${cleanEmail}`
-        : `A 6-digit verification code has been sent to ${cleanEmail}`,
+      message: `A 6-digit verification code has been sent to ${cleanEmail}. Please check your official college inbox or spam folder.`,
       email: cleanEmail,
-      isDevFallback: isFallback,
-      devOtp: isFallback ? (mailResult.fallbackOtp || otp) : undefined,
     });
   } catch (error: any) {
     console.error('Error in send-otp route:', error);
