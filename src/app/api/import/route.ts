@@ -16,7 +16,7 @@ function normalizeYear(yearStr: string): AcademicYear | null {
 
 function normalizeSection(secStr: string): Section | null {
   const s = String(secStr).trim().toUpperCase();
-  if (s === 'A' || s === 'B' || s === 'C') return s as Section;
+  if (s === 'A' || s === 'B') return s as Section;
   return null;
 }
 
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
       const section = normalizeSection(rawSection);
       if (!section) {
-        invalidRows.push({ row: rowNum, roll_number: roll, reason: `Invalid Section '${rawSection}'. Must be A, B, or C.` });
+        invalidRows.push({ row: rowNum, roll_number: roll, reason: `Invalid Section '${rawSection}'. Must be A or B.` });
         return;
       }
 
@@ -160,8 +160,13 @@ export async function POST(req: NextRequest) {
         let targeted = false;
         if (task.target_type === 'ALL') targeted = true;
         else if (task.target_type === 'YEAR' && task.target_year === row.year) targeted = true;
-        else if (task.target_type === 'SECTION' && task.target_section === row.section) targeted = true;
-        else if (task.target_type === 'YEAR_SECTION' && task.target_year === row.year && task.target_section === row.section) targeted = true;
+        else if (task.target_type === 'SECTION') {
+          if (task.target_section === 'BOTH' || task.target_section === 'ALL') targeted = true;
+          else if (task.target_section === row.section) targeted = true;
+        } else if (task.target_type === 'YEAR_SECTION' && task.target_year === row.year) {
+          if (task.target_section === 'BOTH' || task.target_section === 'ALL') targeted = true;
+          else if (task.target_section === row.section) targeted = true;
+        }
 
         if (targeted) {
           await TaskAssignment.findOneAndUpdate(

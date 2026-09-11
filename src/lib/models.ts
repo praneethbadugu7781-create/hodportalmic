@@ -36,7 +36,7 @@ export interface IStudent extends Document {
   email: string;
   phone?: string | null;
   year: '2nd Year' | '3rd Year' | 'Final Year';
-  section: 'A' | 'B' | 'C';
+  section: 'A' | 'B';
   department: string;
   academic_session: string;
   status: 'ACTIVE' | 'DISABLED' | 'GRADUATED';
@@ -50,7 +50,7 @@ const StudentSchema = new Schema<IStudent>({
   email: { type: String, required: true, lowercase: true, trim: true },
   phone: { type: String, default: null },
   year: { type: String, enum: ['2nd Year', '3rd Year', 'Final Year'], required: true, index: true },
-  section: { type: String, enum: ['A', 'B', 'C'], required: true, index: true },
+  section: { type: String, enum: ['A', 'B'], required: true, index: true },
   department: { type: String, default: 'Artificial Intelligence & Machine Learning' },
   academic_session: { type: String, default: '2026-27' },
   status: { type: String, enum: ['ACTIVE', 'DISABLED', 'GRADUATED'], default: 'ACTIVE', index: true },

@@ -398,10 +398,9 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
             }}
             className="text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700"
           >
-            <option value="all">All Sections</option>
+            <option value="all">All Sections (A &amp; B)</option>
             <option value="A">Section A</option>
             <option value="B">Section B</option>
-            <option value="C">Section C</option>
           </select>
 
           <select
@@ -699,7 +698,6 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
                   >
                     <option value="A">Section A</option>
                     <option value="B">Section B</option>
-                    <option value="C">Section C</option>
                   </select>
                 </div>
               </div>

@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
     let totalGraduated = 0;
     let totalDisabled = 0;
     const studentsByYear: Record<string, number> = { '2nd Year': 0, '3rd Year': 0, 'Final Year': 0 };
-    const studentsBySection: Record<string, number> = { 'A': 0, 'B': 0, 'C': 0 };
+    const studentsBySection: Record<string, number> = { 'A': 0, 'B': 0 };
 
     for (const s of studentStats) {
       const { status, year, section } = s._id || {};
@@ -114,7 +114,6 @@ export async function GET(req: NextRequest) {
     const sectionData: Record<string, { assigned: number; completed: number; pending: number; overdue: number }> = {
       'A': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
       'B': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
-      'C': { assigned: 0, completed: 0, pending: 0, overdue: 0 },
     };
 
     const taskStatsMap = new Map<string, { total: number; completed: number; pending: number; overdue: number }>();
@@ -170,7 +169,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const sectionStats = ['A', 'B', 'C'].map((secName) => {
+    const sectionStats = ['A', 'B'].map((secName) => {
       const s = sectionData[secName] || { assigned: 0, completed: 0, pending: 0, overdue: 0 };
       return {
         section: secName,

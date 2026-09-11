@@ -492,10 +492,9 @@ export function TaskTracker({
             onChange={(e) => setSectionFilter(e.target.value)}
             className="text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700"
           >
-            <option value="all">All Sections</option>
+            <option value="all">All Sections (A &amp; B)</option>
             <option value="A">Section A</option>
             <option value="B">Section B</option>
-            <option value="C">Section C</option>
           </select>
 
           {activeTab === 'not_completed' && (

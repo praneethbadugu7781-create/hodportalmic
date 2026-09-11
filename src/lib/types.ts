@@ -1,7 +1,8 @@
 export type Role = 'admin' | 'student';
 
 export type AcademicYear = '2nd Year' | '3rd Year' | 'Final Year';
-export type Section = 'A' | 'B' | 'C';
+export type Section = 'A' | 'B';
+export type TargetSection = 'A' | 'B' | 'BOTH';
 export type StudentStatus = 'ACTIVE' | 'DISABLED' | 'GRADUATED';
 export type TaskType = 'YES_NO' | 'FILE_SUBMISSION' | 'LINK_CONFIRMATION';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -45,7 +46,7 @@ export interface Task {
   required: number; // 1 or 0
   target_type: TargetType;
   target_year?: AcademicYear | null;
-  target_section?: Section | null;
+  target_section?: TargetSection | Section | null;
   target_student_ids?: string | null; // JSON array of numbers
   attachment_url?: string | null;
   status: TaskStatus;

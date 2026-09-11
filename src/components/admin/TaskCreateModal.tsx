@@ -13,7 +13,7 @@ import {
   ChevronLeft,
   X,
 } from 'lucide-react';
-import { TaskType, TaskPriority, TargetType, AcademicYear, Section } from '@/lib/types';
+import { TaskType, TaskPriority, TargetType, AcademicYear, Section, TargetSection } from '@/lib/types';
 import { useToast } from '../ui/Toast';
 
 interface TaskCreateModalProps {
@@ -38,7 +38,7 @@ export function TaskCreateModal({ isOpen, onClose, onTaskCreated }: TaskCreateMo
   const [required, setRequired] = useState(true);
   const [targetType, setTargetType] = useState<TargetType>('ALL');
   const [targetYear, setTargetYear] = useState<AcademicYear>('3rd Year');
-  const [targetSection, setTargetSection] = useState<Section>('A');
+  const [targetSection, setTargetSection] = useState<TargetSection | Section>('BOTH');
 
   // Preview Student Count
   const [estimatedStudentCount, setEstimatedStudentCount] = useState<number>(0);
@@ -56,11 +56,14 @@ export function TaskCreateModal({ isOpen, onClose, onTaskCreated }: TaskCreateMo
 
   const calculateTargetCount = async () => {
     try {
+      const isBoth = targetSection === 'BOTH';
       const query = new URLSearchParams({
         status: 'ACTIVE',
         limit: '1000',
         year: targetType === 'YEAR' || targetType === 'YEAR_SECTION' ? targetYear : 'all',
-        section: targetType === 'SECTION' || targetType === 'YEAR_SECTION' ? targetSection : 'all',
+        section: (targetType === 'SECTION' || targetType === 'YEAR_SECTION')
+          ? (isBoth ? 'all' : targetSection)
+          : 'all',
       });
       const res = await fetch(`/api/students?${query}`);
       const data = await res.json();
@@ -429,12 +432,12 @@ export function TaskCreateModal({ isOpen, onClose, onTaskCreated }: TaskCreateMo
                   </label>
                   <select
                     value={targetSection}
-                    onChange={(e) => setTargetSection(e.target.value as Section)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                    onChange={(e) => setTargetSection(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                   >
+                    <option value="BOTH">Both (Section A &amp; B)</option>
                     <option value="A">Section A</option>
                     <option value="B">Section B</option>
-                    <option value="C">Section C</option>
                   </select>
                 </div>
               )}

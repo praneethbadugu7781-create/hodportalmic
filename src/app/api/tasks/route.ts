@@ -180,10 +180,18 @@ export async function POST(req: NextRequest) {
     if (target_type === 'YEAR' && target_year) {
       studentQuery.year = target_year;
     } else if (target_type === 'SECTION' && target_section) {
-      studentQuery.section = target_section;
+      if (target_section === 'BOTH' || target_section === 'ALL') {
+        studentQuery.section = { $in: ['A', 'B'] };
+      } else {
+        studentQuery.section = target_section;
+      }
     } else if (target_type === 'YEAR_SECTION' && target_year && target_section) {
       studentQuery.year = target_year;
-      studentQuery.section = target_section;
+      if (target_section === 'BOTH' || target_section === 'ALL') {
+        studentQuery.section = { $in: ['A', 'B'] };
+      } else {
+        studentQuery.section = target_section;
+      }
     } else if (target_type === 'SPECIFIC' && Array.isArray(target_student_ids) && target_student_ids.length > 0) {
       studentQuery._id = { $in: target_student_ids };
     }

@@ -556,7 +556,6 @@ export function BulkImportModal({ isOpen, onClose, onImportSuccess }: BulkImport
                 >
                   <option value="A">Section A (or Auto-detect)</option>
                   <option value="B">Section B</option>
-                  <option value="C">Section C</option>
                 </select>
               </div>
 
