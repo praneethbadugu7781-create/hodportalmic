@@ -286,7 +286,17 @@ export function parseStudentsFromText(
     }
 
     // 5. Clean Student Name from remaining chunk
-    let namePart = chunk;
+    // Restrict name search to the current line (never bleed into table footer, signatures, or subsequent lines)
+    let lineOnly = chunk.split(/[\r\n]+/)[0] || '';
+
+    // Stop at common signature / authority / footer keywords
+    const stopWordsRegex = /\b(?:Attendance|Coordinat(?:or|o\s*r)?|HOD|Principal|Incharge|Signature|Sign|Staff|Faculty|Controller|Examinations|Date|Time|Page|Class|Branch|Semester|Session)\b/i;
+    const stopIndex = lineOnly.search(stopWordsRegex);
+    if (stopIndex !== -1) {
+      lineOnly = lineOnly.substring(0, stopIndex);
+    }
+
+    let namePart = lineOnly;
     if (emailMatch) namePart = namePart.replace(emailMatch[0], ' ');
     if (phoneMatch) namePart = namePart.replace(phoneMatch[0], ' ');
 
@@ -301,9 +311,38 @@ export function parseStudentsFromText(
     namePart = namePart.replace(/^\s*\d+[\s.)-]+/, ' '); // remove S.No numbers
     namePart = namePart.replace(/[^a-zA-Z\s.-]/g, ' ');
 
-    let cleanName = namePart.trim().replace(/\s+/g, ' ');
-    // Strip leading or trailing dashes, dots, spaces
-    cleanName = cleanName.replace(/^[-\s.]+|[-\s.]+$/g, '');
+    // Stop if encountering random glyph codes / verification hashes (e.g. TzM, GkQ, ZJ, CR...)
+    const words = namePart.trim().split(/\s+/);
+    const cleanWords: string[] = [];
+    for (const w of words) {
+      if (!w) continue;
+      // Stop on unnatural token capitalization like TzM or GkQ
+      if (/[a-z][A-Z]/.test(w) || /[A-Z]{2,}[a-z][A-Z]/.test(w)) break;
+      // If we already have at least 2 name tokens and hit known glyph/footer abbreviations
+      if (cleanWords.length >= 2 && /^(?:ZJ|CR|GkQ|XC|gR|TzM|Rn|X|O|L|TG)$/i.test(w)) break;
+      cleanWords.push(w);
+    }
+
+    let cleanName = cleanWords.join(' ').replace(/^[-\s.]+|[-\s.]+$/g, '');
+
+    // Fallback: Check preceding text on same line if name was printed before roll number
+    if (!cleanName || cleanName.length < 2) {
+      const beforeText = fullText.substring(Math.max(0, current.index - 80), current.index);
+      const beforeLine = beforeText.split(/[\r\n]+/).pop() || '';
+      let candidateBefore = beforeLine
+        .replace(/^\s*\d+[\s.)-]+/, ' ')
+        .replace(/[^a-zA-Z\s.-]/g, ' ')
+        .trim();
+      if (candidateBefore.length >= 3) {
+        cleanName = candidateBefore;
+      }
+    }
+
+    // Format into official Title Case (e.g. "Kureti Pradeep", "Tippa Karthik")
+    cleanName = cleanName
+      .toLowerCase()
+      .replace(/(?:^|\s|-|\.)[a-z]/g, (char) => char.toUpperCase())
+      .trim();
 
     // If clean name has leftover words or is empty, provide clean fallback
     if (!cleanName || cleanName.length < 2) {

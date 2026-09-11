@@ -184,7 +184,17 @@ export function BulkImportModal({ isOpen, onClose, onImportSuccess }: BulkImport
         else section = 'B';
       }
 
-      let namePart = chunk;
+      // Take only the line where the student appears (never bleed into table footer, signatures, or subsequent lines)
+      let lineOnly = chunk.split(/[\r\n]+/)[0] || '';
+
+      // Stop at common signature / authority / footer keywords
+      const stopWordsRegex = /\b(?:Attendance|Coordinat(?:or|o\s*r)?|HOD|Principal|Incharge|Signature|Sign|Staff|Faculty|Controller|Examinations|Date|Time|Page|Class|Branch|Semester|Session)\b/i;
+      const stopIndex = lineOnly.search(stopWordsRegex);
+      if (stopIndex !== -1) {
+        lineOnly = lineOnly.substring(0, stopIndex);
+      }
+
+      let namePart = lineOnly;
       if (emailMatch) namePart = namePart.replace(emailMatch[0], ' ');
       if (phoneMatch) namePart = namePart.replace(phoneMatch[0], ' ');
 
@@ -197,7 +207,24 @@ export function BulkImportModal({ isOpen, onClose, onImportSuccess }: BulkImport
       namePart = namePart.replace(/^\s*\d+[\s.)-]+/, ' ');
       namePart = namePart.replace(/[^a-zA-Z\s.-]/g, ' ');
 
-      let cleanName = namePart.trim().replace(/\s+/g, ' ').replace(/^[-\s.]+|[-\s.]+$/g, '');
+      // Stop if encountering random glyph codes / verification hashes (e.g. TzM, GkQ, ZJ, CR...)
+      const words = namePart.trim().split(/\s+/);
+      const cleanWords: string[] = [];
+      for (const w of words) {
+        if (!w) continue;
+        if (/[a-z][A-Z]/.test(w) || /[A-Z]{2,}[a-z][A-Z]/.test(w)) break;
+        if (cleanWords.length >= 2 && /^(?:ZJ|CR|GkQ|XC|gR|TzM|Rn|X|O|L|TG)$/i.test(w)) break;
+        cleanWords.push(w);
+      }
+
+      let cleanName = cleanWords.join(' ').replace(/^[-\s.]+|[-\s.]+$/g, '');
+
+      // Format into official Title Case (e.g. "Kureti Pradeep", "Tippa Karthik")
+      cleanName = cleanName
+        .toLowerCase()
+        .replace(/(?:^|\s|-|\.)[a-z]/g, (char) => char.toUpperCase())
+        .trim();
+
       if (!cleanName || cleanName.length < 2) cleanName = `Student ${curr.roll}`;
       if (cleanName.length > 50) cleanName = cleanName.slice(0, 50).trim();
 
