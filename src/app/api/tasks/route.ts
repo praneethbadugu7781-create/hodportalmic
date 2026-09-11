@@ -53,13 +53,19 @@ export async function GET(req: NextRequest) {
     // Admin view
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') || '';
-    const forceRefresh = searchParams.get('refresh') === 'true';
+    const forceRefresh = searchParams.get('refresh') === 'true' || searchParams.has('_t');
 
     const cacheKey = `admin_tasks_${status || 'all'}`;
     if (!forceRefresh) {
       const cached = getCached<any>(cacheKey);
       if (cached) {
-        return NextResponse.json(cached);
+        return NextResponse.json(cached, {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          },
+        });
       }
     }
 
@@ -112,9 +118,17 @@ export async function GET(req: NextRequest) {
     });
 
     const responseData = { tasks };
-    setCached(cacheKey, responseData, 20);
+    if (!forceRefresh) {
+      setCached(cacheKey, responseData, 6);
+    }
 
-    return NextResponse.json(responseData);
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching tasks:', error);
     return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });

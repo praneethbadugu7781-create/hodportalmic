@@ -89,7 +89,13 @@ export function TaskTracker({
       setLoading(true);
     }
     try {
-      const res = await fetch(`/api/tasks/${taskId}`);
+      const res = await fetch(`/api/tasks/${taskId}?refresh=true&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
       const data = await res.json();
       if (res.ok) {
         setTaskData(data);
@@ -107,6 +113,57 @@ export function TaskTracker({
       }
     }
   };
+
+  // Real-time live auto-sync without manual page refresh
+  useEffect(() => {
+    if (!activeTask?.id) return;
+
+    // 1. Instant sync when admin tab gains focus or becomes visible
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTaskDetails(activeTask.id, true);
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    // 2. Cross-tab instant communication via BroadcastChannel (0ms sync)
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('hod_task_sync');
+        channel.onmessage = (event) => {
+          if (event.data?.type === 'TASK_SUBMITTED') {
+            fetchTaskDetails(activeTask.id, true);
+          }
+        };
+      }
+    } catch {}
+
+    // 3. Cross-tab fallback via storage event
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'hod_last_submission') {
+        fetchTaskDetails(activeTask.id, true);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 4. Live polling heartbeat every 3.5 seconds when tab is active
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchTaskDetails(activeTask.id, true);
+      }
+    }, 3500);
+
+    return () => {
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(pollInterval);
+      if (channel) channel.close();
+    };
+  }, [activeTask?.id]);
 
   const handleDeleteActiveTask = async () => {
     if (!activeTask) return;
@@ -297,6 +354,10 @@ export function TaskTracker({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
                 Task Specific Tracking
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/80 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Live Real-Time Sync</span>
               </span>
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                 activeTask.priority === 'URGENT' ? 'bg-rose-100 text-rose-800' :

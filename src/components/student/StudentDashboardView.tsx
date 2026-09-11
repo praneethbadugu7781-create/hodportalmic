@@ -73,7 +73,10 @@ export function StudentDashboardView({
   const fetchStudentTasks = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/tasks');
+      const res = await fetch(`/api/tasks?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
       const data = await res.json();
       if (res.ok) {
         setTasks(data.tasks || []);
@@ -89,6 +92,20 @@ export function StudentDashboardView({
 
   useEffect(() => {
     fetchStudentTasks();
+
+    const handleSync = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStudentTasks();
+      }
+    };
+
+    window.addEventListener('focus', handleSync);
+    document.addEventListener('visibilitychange', handleSync);
+
+    return () => {
+      window.removeEventListener('focus', handleSync);
+      document.removeEventListener('visibilitychange', handleSync);
+    };
   }, []);
 
   const totalAssigned = tasks.length;

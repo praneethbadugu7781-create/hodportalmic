@@ -14,14 +14,19 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const forceRefresh = searchParams.get('refresh') === 'true';
+    const forceRefresh = searchParams.get('refresh') === 'true' || searchParams.has('_t');
 
     const cacheKey = 'admin_analytics_summary';
     if (!forceRefresh) {
       const cachedData = getCached<any>(cacheKey);
       if (cachedData) {
         return NextResponse.json(cachedData, {
-          headers: { 'X-Cache': 'HIT' }
+          headers: {
+            'X-Cache': 'HIT',
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          },
         });
       }
     }
@@ -217,12 +222,16 @@ export async function GET(req: NextRequest) {
       recentActivity: recentActivity.map((l: any) => ({ ...l, id: l._id.toString() })),
     };
 
-    setCached(cacheKey, result, 20); // 20-second TTL cache
+    if (!forceRefresh) {
+      setCached(cacheKey, result, 6);
+    }
 
     return NextResponse.json(result, {
       headers: {
         'X-Cache': 'MISS',
-        'Cache-Control': 'private, no-cache, no-transform',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error: any) {

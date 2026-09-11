@@ -148,10 +148,16 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const fetchTasks = async (showToast = false) => {
-    setTasksLoading(true);
+  const fetchTasks = async (showToast = false, isBackground = false) => {
+    if (!isBackground) setTasksLoading(true);
     try {
-      const res = await fetch('/api/tasks');
+      const res = await fetch(`/api/tasks?refresh=true&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
       const data = await res.json();
       if (res.ok) {
         const loadedTasks = data.tasks || [];
@@ -166,14 +172,20 @@ export default function AdminDashboardPage() {
     } catch {
       if (showToast) error('Failed to load tasks');
     } finally {
-      setTasksLoading(false);
+      if (!isBackground) setTasksLoading(false);
     }
   };
 
-  const fetchStats = async () => {
-    setStatsLoading(true);
+  const fetchStats = async (isBackground = false) => {
+    if (!isBackground) setStatsLoading(true);
     try {
-      const res = await fetch('/api/analytics');
+      const res = await fetch(`/api/analytics?refresh=true&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
       const data = await res.json();
       if (res.ok) {
         setStats(data.summary);
@@ -184,9 +196,65 @@ export default function AdminDashboardPage() {
     } catch {
       // ignore
     } finally {
-      setStatsLoading(false);
+      if (!isBackground) setStatsLoading(false);
     }
   };
+
+  const syncDashboardLive = async () => {
+    if (document.visibilityState !== 'visible') return;
+    try {
+      await Promise.all([
+        fetchTasks(false, true),
+        fetchStats(true),
+      ]);
+    } catch {}
+  };
+
+  // Real-time live auto-sync for admin dashboard
+  useEffect(() => {
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        syncDashboardLive();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    // Cross-tab communication via BroadcastChannel
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('hod_task_sync');
+        channel.onmessage = (event) => {
+          if (event.data?.type === 'TASK_SUBMITTED') {
+            syncDashboardLive();
+          }
+        };
+      }
+    } catch {}
+
+    // Cross-tab fallback via storage event
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'hod_last_submission') {
+        syncDashboardLive();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // Live polling heartbeat every 3.5 seconds
+    const interval = setInterval(() => {
+      syncDashboardLive();
+    }, 3500);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+      if (channel) channel.close();
+    };
+  }, []);
 
   const handleKpiCardClick = (type: 'students' | 'completed' | 'pending' | 'tasks' | 'overdue') => {
     if (type === 'students') {
@@ -234,10 +302,14 @@ export default function AdminDashboardPage() {
       <Navbar
         user={user}
         currentSession="2026-27"
-        onRefresh={() => {
-          fetchTasks();
-          fetchStats();
-          info('Data refreshed');
+        onRefresh={async () => {
+          await Promise.all([fetchTasks(false, false), fetchStats(false)]);
+          try {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new Event('focus'));
+            }
+          } catch {}
+          info('Live data refreshed from server');
         }}
         onOpenProfile={() => setShowAdminProfile(true)}
       />

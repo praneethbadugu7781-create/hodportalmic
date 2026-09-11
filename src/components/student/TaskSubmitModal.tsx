@@ -116,6 +116,18 @@ export function TaskSubmitModal({ task, isOpen, onClose, onSubmitSuccess }: Task
       const data = await res.json();
       if (res.ok) {
         success(data.message || 'Task submitted successfully!');
+        // Instant cross-tab sync to Admin Portal
+        try {
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const channel = new BroadcastChannel('hod_task_sync');
+            channel.postMessage({ type: 'TASK_SUBMITTED', taskId: task.id, timestamp: Date.now() });
+            channel.close();
+          }
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('hod_last_submission', JSON.stringify({ taskId: task.id, timestamp: Date.now() }));
+          }
+        } catch {}
+
         onSubmitSuccess();
         onClose();
       } else {

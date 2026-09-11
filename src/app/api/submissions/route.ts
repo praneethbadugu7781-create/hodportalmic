@@ -78,10 +78,7 @@ export async function POST(req: NextRequest) {
     assignment.completed_at = newStatus === 'COMPLETED' ? new Date() : null;
     await assignment.save();
 
-    invalidateCache('task_detail_');
-    invalidateCache('admin_tasks');
-    invalidateCache('analytics');
-    invalidateCache('students_');
+    invalidateCache();
 
     return NextResponse.json({
       success: true,

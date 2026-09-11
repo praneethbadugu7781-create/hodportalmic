@@ -20,14 +20,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     const { searchParams } = new URL(req.url);
-    const forceRefresh = searchParams.get('refresh') === 'true';
+    const forceRefresh = searchParams.get('refresh') === 'true' || searchParams.has('_t');
 
     // Fast cache for admin view
     const cacheKey = `task_detail_${taskId}`;
     if (user?.role === 'admin' && !forceRefresh) {
       const cached = getCached<any>(cacheKey);
       if (cached) {
-        return NextResponse.json(cached);
+        return NextResponse.json(cached, {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          },
+        });
       }
     }
 
@@ -159,11 +165,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       },
     };
 
-    setCached(cacheKey, responseData, 25);
+    if (!forceRefresh) {
+      setCached(cacheKey, responseData, 6);
+    }
 
     return NextResponse.json(responseData, {
       headers: {
-        'Cache-Control': 'private, no-cache, no-transform',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error: any) {
