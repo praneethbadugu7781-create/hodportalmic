@@ -11,6 +11,7 @@ interface NavbarProps {
     username: string;
     email: string;
     role: 'admin' | 'student';
+    name?: string;
   } | null;
   student?: {
     roll_number: string;
@@ -97,12 +98,24 @@ export function Navbar({ user, student, currentSession = '2026-27', onRefresh, o
                   </button>
                 )}
 
+                {user.role === 'admin' && onOpenProfile && (
+                  <button
+                    onClick={onOpenProfile}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-all shadow-2xs border border-blue-200/60 cursor-pointer"
+                    title="HOD Profile & Security Settings"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="hidden xs:inline">HOD Profile</span>
+                  </button>
+                )}
+
                 <div
-                  onClick={user.role === 'student' && onOpenProfile ? onOpenProfile : undefined}
-                  className={`text-right hidden sm:block ${user.role === 'student' && onOpenProfile ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                  onClick={onOpenProfile}
+                  className={`text-right hidden sm:block ${onOpenProfile ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                  title={onOpenProfile ? 'Click to view & edit profile' : undefined}
                 >
-                  <div className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate max-w-[160px] font-display">
-                    {user.role === 'admin' ? 'Dr. / Prof. (HOD)' : student?.name || user.username}
+                  <div className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate max-w-[170px] font-display">
+                    {user.role === 'admin' ? (user.name || 'Dr. / Prof. (HOD)') : (student?.name || user.username)}
                   </div>
                   <div className="text-[11px] text-slate-500 flex items-center justify-end gap-1 font-semibold">
                     {user.role === 'admin' ? (
@@ -118,12 +131,13 @@ export function Navbar({ user, student, currentSession = '2026-27', onRefresh, o
                 </div>
 
                 <div
-                  onClick={user.role === 'student' && onOpenProfile ? onOpenProfile : undefined}
+                  onClick={onOpenProfile}
                   className={`w-8 sm:w-9 h-8 sm:h-9 rounded-xl ${
                     user.role === 'admin'
                       ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xs shadow-blue-500/25'
                       : 'bg-slate-100 border border-slate-200 text-slate-700'
-                  } flex items-center justify-center font-black text-xs sm:text-sm ${user.role === 'student' && onOpenProfile ? 'cursor-pointer hover:border-blue-400' : ''}`}
+                  } flex items-center justify-center font-black text-xs sm:text-sm ${onOpenProfile ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+                  title={onOpenProfile ? 'Profile Settings' : undefined}
                 >
                   {user.role === 'admin' ? 'HOD' : student?.name ? student.name[0] : 'S'}
                 </div>

@@ -11,6 +11,7 @@ import {
   History,
   PlusCircle,
   Upload,
+  ShieldCheck,
 } from 'lucide-react';
 
 export type AdminTab = 'dashboard' | 'tasks' | 'students' | 'promotion' | 'analytics' | 'archived' | 'audit';
@@ -25,6 +26,7 @@ interface AdminSidebarProps {
     totalStudents?: number;
     pendingCount?: number;
   };
+  onOpenProfile?: () => void;
 }
 
 export function AdminSidebar({
@@ -33,6 +35,7 @@ export function AdminSidebar({
   onOpenCreateTask,
   onOpenImport,
   counts,
+  onOpenProfile,
 }: AdminSidebarProps) {
   const navItems: { id: AdminTab; label: string; icon: React.ElementType; badge?: number | string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -104,6 +107,29 @@ export function AdminSidebar({
           </div>
         </nav>
       </div>
+
+      {/* HOD Profile & Credentials Quick Access */}
+      {onOpenProfile && (
+        <div className="pt-3 mt-3 border-t border-slate-200/80 hidden lg:block">
+          <button
+            onClick={onOpenProfile}
+            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-blue-50/70 border border-slate-200/80 hover:border-blue-200 text-slate-700 hover:text-blue-700 transition-all text-xs font-bold group cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="font-extrabold text-slate-900 group-hover:text-blue-700 text-xs">HOD Profile</div>
+                <div className="text-[10px] text-slate-400 font-normal">Security &amp; Password</div>
+              </div>
+            </div>
+            <span className="text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+              Edit
+            </span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

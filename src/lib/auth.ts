@@ -86,6 +86,7 @@ export async function getAuthenticatedUser(req?: NextRequest): Promise<{
     return {
       user: {
         id: (user as any)._id.toString(),
+        name: user.name || (user.role === 'admin' ? 'Dr. / Prof. (HOD)' : null),
         email: user.email,
         username: user.username,
         role: user.role,

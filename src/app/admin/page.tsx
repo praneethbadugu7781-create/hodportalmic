@@ -13,6 +13,7 @@ import { BulkImportModal } from '@/components/admin/BulkImportModal';
 import { PromotionModal } from '@/components/admin/PromotionModal';
 import { StudentProfileModal } from '@/components/admin/StudentProfileModal';
 import { ConfirmDeleteModal } from '@/components/admin/ConfirmDeleteModal';
+import { AdminProfileModal } from '@/components/admin/AdminProfileModal';
 import { Task } from '@/lib/types';
 import { useToast } from '@/components/ui/Toast';
 import { PlusCircle, Search, Filter, Archive, CheckCircle2, Clock, AlertTriangle, Eye, Trash2 } from 'lucide-react';
@@ -39,6 +40,7 @@ export default function AdminDashboardPage() {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
+  const [showAdminProfile, setShowAdminProfile] = useState(false);
   const [activeProfileStudentId, setActiveProfileStudentId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -157,6 +159,7 @@ export default function AdminDashboardPage() {
           fetchStats();
           info('Data refreshed');
         }}
+        onOpenProfile={() => setShowAdminProfile(true)}
       />
 
       <div className="flex-1 flex flex-col lg:flex-row max-w-7xl w-full mx-auto">
@@ -171,6 +174,7 @@ export default function AdminDashboardPage() {
             totalStudents: stats?.totalStudents,
             pendingCount: stats?.totalPending,
           }}
+          onOpenProfile={() => setShowAdminProfile(true)}
         />
 
         {/* Main Content Area */}
@@ -407,6 +411,18 @@ export default function AdminDashboardPage() {
         isDeleting={isDeletingTask}
         onConfirm={handleDeleteTask}
         onClose={() => setTaskToDelete(null)}
+      />
+
+      <AdminProfileModal
+        isOpen={showAdminProfile}
+        onClose={() => setShowAdminProfile(false)}
+        user={user}
+        onUpdate={(updated) => {
+          setUser((prev: any) => ({
+            ...prev,
+            ...updated,
+          }));
+        }}
       />
     </div>
   );
