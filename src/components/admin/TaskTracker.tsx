@@ -416,47 +416,47 @@ export function TaskTracker({
       </div>
 
       {/* Tabs & Top Actions Bar */}
-      <div className="p-4 sm:p-6 border-b border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-50/60">
+      <div className="p-3.5 sm:p-6 border-b border-slate-200 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4 bg-slate-50/60">
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2 bg-slate-200/80 p-1 rounded-xl shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-200/80 p-1 rounded-xl w-full lg:w-auto shrink-0">
           <button
             onClick={() => setActiveTab('not_completed')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
               activeTab === 'not_completed'
                 ? 'bg-white text-rose-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Clock className="w-4 h-4 text-rose-600" />
-            <span>NOT COMPLETED ({pendingCount + overdueCount})</span>
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 shrink-0" />
+            <span className="truncate">NOT COMPLETED ({pendingCount + overdueCount})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('completed')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
               activeTab === 'completed'
                 ? 'bg-white text-emerald-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>COMPLETED ({completedCount})</span>
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+            <span className="truncate">COMPLETED ({completedCount})</span>
           </button>
         </div>
 
         {/* Top Actions Bar */}
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
           {/* CROWN JEWEL ACTIONS: Copy Pending Roll Numbers */}
           {activeTab === 'not_completed' && (
-            <>
-              {/* Primary Copy Button */}
-              <div className="relative inline-flex rounded-xl shadow-sm">
+            <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+              {/* Primary Copy Button Group */}
+              <div className="relative inline-flex rounded-xl shadow-xs flex-1 sm:flex-initial">
                 <button
                   onClick={() => handleCopyPending('newline', false)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2.5 rounded-l-xl font-bold text-sm transition-colors shadow-xs cursor-pointer"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-3 sm:px-4 py-2.5 rounded-l-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                 >
-                  {copiedFormat === 'newline' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span>COPY ROLL NUMBERS ({notCompletedList.length})</span>
+                  {copiedFormat === 'newline' ? <Check className="w-4 h-4 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
+                  <span className="truncate">COPY ROLLS ({notCompletedList.length})</span>
                 </button>
 
                 <div className="relative group">
@@ -515,73 +515,78 @@ export function TaskTracker({
               {selectedStudentIds.length > 0 && (
                 <button
                   onClick={() => handleCopyPending('newline', true)}
-                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors animate-in fade-in cursor-pointer"
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 sm:px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors animate-in fade-in cursor-pointer shrink-0"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Copy {selectedStudentIds.length} Selected</span>
+                  <span className="hidden sm:inline">Copy</span> {selectedStudentIds.length} Sel
                 </button>
               )}
+            </div>
+          )}
 
-              {/* WhatsApp Broadcast Notice Modal Trigger */}
+          {/* Action Buttons Row */}
+          <div className="flex items-center gap-1.5 sm:gap-2 justify-end flex-wrap sm:flex-nowrap">
+            {/* WhatsApp Broadcast Notice Modal Trigger */}
+            {activeTab === 'not_completed' && (
               <button
                 onClick={() => setShowWhatsAppNoticeModal(true)}
-                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-3 sm:px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer"
                 title="Broadcast segmented notice to WhatsApp"
               >
-                <Share2 className="w-4 h-4" />
-                <span className="hidden sm:inline">WhatsApp Notice</span>
+                <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">WhatsApp Notice</span>
               </button>
-            </>
-          )}
+            )}
 
-          {/* Download Submissions (.ZIP) */}
-          {(activeTask.type === 'FILE_SUBMISSION' || completedList.some((s) => s.submission_file_url)) && (
+            {/* Download Submissions (.ZIP) */}
+            {(activeTask.type === 'FILE_SUBMISSION' || completedList.some((s) => s.submission_file_url)) && (
+              <button
+                onClick={handleDownloadZip}
+                disabled={isExportingZip}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 sm:px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                title="Download all submitted proof documents in a structured ZIP with CSV manifest"
+              >
+                <Archive className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 shrink-0" />
+                <span className="hidden sm:inline">Download</span> ZIP
+                <span className="text-[10px] sm:text-xs px-1.5 py-0.5 bg-indigo-200/60 rounded-md font-extrabold text-indigo-800">
+                  {completedList.filter((s) => s.submission_file_url).length}
+                </span>
+              </button>
+            )}
+
+            {/* Export Task PDF Report */}
             <button
-              onClick={handleDownloadZip}
-              disabled={isExportingZip}
-              className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              title="Download all submitted proof documents in a structured ZIP with CSV manifest"
+              onClick={async () => {
+                try {
+                  const { exportTaskReportPdf } = await import('@/lib/pdf-export');
+                  await exportTaskReportPdf(activeTask, completedList, notCompletedList);
+                  success('Official Task Compliance PDF Report generated!');
+                } catch {
+                  error('Failed to export PDF');
+                }
+              }}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3 sm:px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer"
+              title="Download formal MIC Compliance PDF Report"
             >
-              <Archive className="w-4 h-4 text-indigo-600" />
-              <span className="hidden sm:inline">Download ZIP</span>
-              <span className="text-xs px-1.5 py-0.5 bg-indigo-200/60 rounded-md font-extrabold text-indigo-800">
-                {completedList.filter((s) => s.submission_file_url).length}
-              </span>
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 shrink-0" />
+              <span className="truncate">Export PDF</span>
             </button>
-          )}
 
-          {/* Export Task PDF Report */}
-          <button
-            onClick={async () => {
-              try {
-                const { exportTaskReportPdf } = await import('@/lib/pdf-export');
-                await exportTaskReportPdf(activeTask, completedList, notCompletedList);
-                success('Official Task Compliance PDF Report generated!');
-              } catch {
-                error('Failed to export PDF');
-              }
-            }}
-            className="flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer"
-            title="Download formal MIC Compliance PDF Report"
-          >
-            <Download className="w-4 h-4 text-rose-400" />
-            <span>Export PDF</span>
-          </button>
-
-          {/* Delete Task Button */}
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer"
-            title="Delete this task permanently"
-          >
-            <Trash2 className="w-4 h-4 text-rose-600" />
-            <span className="hidden sm:inline">Delete Task</span>
-          </button>
+            {/* Delete Task Button */}
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 px-2.5 sm:px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer shrink-0"
+              title="Delete this task permanently"
+            >
+              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 shrink-0" />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Filter & Search Bar inside Task */}
-      <div className="p-4 border-b border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="p-3.5 sm:p-4 border-b border-slate-200 bg-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
         <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           <input
@@ -589,15 +594,15 @@ export function TaskTracker({
             placeholder="Search roll no or name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
           <select
             value={yearFilter}
             onChange={(e) => setYearFilter(e.target.value)}
-            className="text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700"
+            className="flex-1 sm:flex-initial text-xs font-medium px-2.5 sm:px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700"
           >
             <option value="all">All Years</option>
             <option value="2nd Year">2nd Year</option>
@@ -608,7 +613,7 @@ export function TaskTracker({
           <select
             value={sectionFilter}
             onChange={(e) => setSectionFilter(e.target.value)}
-            className="text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700"
+            className="flex-1 sm:flex-initial text-xs font-medium px-2.5 sm:px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700"
           >
             <option value="all">All Sections (A &amp; B)</option>
             <option value="A">Section A</option>
@@ -616,17 +621,17 @@ export function TaskTracker({
           </select>
 
           {activeTab === 'not_completed' && (
-            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 shrink-0">
               <button
                 onClick={handleSelectAll}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-2 py-1 hover:bg-blue-50 rounded-lg transition-colors"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-2 py-1 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
               >
                 Select All
               </button>
               {selectedStudentIds.length > 0 && (
                 <button
                   onClick={handleClearSelection}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-2 py-1 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-2 py-1 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 >
                   Clear ({selectedStudentIds.length})
                 </button>
@@ -658,91 +663,157 @@ export function TaskTracker({
               </p>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-3 px-4 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={
-                        filteredNotCompleted.length > 0 &&
-                        selectedStudentIds.length === filteredNotCompleted.length
-                      }
-                      onChange={(e) => {
-                        if (e.target.checked) handleSelectAll();
-                        else handleClearSelection();
-                      }}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                    />
-                  </th>
-                  <th className="py-3 px-4">Roll Number</th>
-                  <th className="py-3 px-4">Student Name</th>
-                  <th className="py-3 px-4">Year</th>
-                  <th className="py-3 px-4">Section</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+            <>
+              {/* Mobile Card View (< md) */}
+              <div className="md:hidden divide-y divide-slate-100">
                 {filteredNotCompleted.map((s) => {
                   const isSelected = selectedStudentIds.includes(s.student_id);
                   const isOverdue = s.assignment_status === 'OVERDUE';
                   return (
-                    <tr
+                    <div
                       key={s.student_id}
-                      className={`hover:bg-slate-50 transition-colors ${
-                        isSelected ? 'bg-blue-50/60' : ''
+                      className={`p-3.5 flex items-start gap-3 transition-colors ${
+                        isSelected ? 'bg-blue-50/70' : 'bg-white hover:bg-slate-50'
                       }`}
                     >
-                      <td className="py-3 px-4 text-center">
+                      <div className="pt-0.5">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleSelectStudent(s.student_id)}
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                         />
-                      </td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                        {s.roll_number}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-slate-800">
-                        {s.name}
-                        {s.phone && (
-                          <span className="block text-xs font-normal text-slate-400">{s.phone}</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600">{s.year}</td>
-                      <td className="py-3 px-4">
-                        <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-xs">
-                          Sec {s.section}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
-                            isOverdue
-                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                              : 'bg-amber-100 text-amber-800 border border-amber-200'
-                          }`}
-                        >
-                          {isOverdue && <AlertTriangle className="w-3 h-3 text-rose-600" />}
-                          {s.assignment_status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => onOpenStudentProfile(s.student_id)}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View Profile</span>
-                        </button>
-                      </td>
-                    </tr>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-mono font-black text-slate-900 text-sm tracking-tight">
+                            {s.roll_number}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              isOverdue
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            }`}
+                          >
+                            {isOverdue && <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />}
+                            {s.assignment_status}
+                          </span>
+                        </div>
+                        <div className="font-bold text-slate-800 text-xs mt-0.5 truncate">{s.name}</div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                          <span className="font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+                            Sec {s.section}
+                          </span>
+                          <span>•</span>
+                          <span>{s.year}</span>
+                          {s.phone && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">{s.phone}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onOpenStudentProfile(s.student_id)}
+                        className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 shrink-0 cursor-pointer"
+                        title="View Student Profile"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop Table (>= md) */}
+              <table className="hidden md:table w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <th className="py-3 px-4 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        checked={
+                          filteredNotCompleted.length > 0 &&
+                          selectedStudentIds.length === filteredNotCompleted.length
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) handleSelectAll();
+                          else handleClearSelection();
+                        }}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      />
+                    </th>
+                    <th className="py-3 px-4">Roll Number</th>
+                    <th className="py-3 px-4">Student Name</th>
+                    <th className="py-3 px-4">Year</th>
+                    <th className="py-3 px-4">Section</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredNotCompleted.map((s) => {
+                    const isSelected = selectedStudentIds.includes(s.student_id);
+                    const isOverdue = s.assignment_status === 'OVERDUE';
+                    return (
+                      <tr
+                        key={s.student_id}
+                        className={`hover:bg-slate-50 transition-colors ${
+                          isSelected ? 'bg-blue-50/60' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectStudent(s.student_id)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                          {s.roll_number}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-slate-800">
+                          {s.name}
+                          {s.phone && (
+                            <span className="block text-xs font-normal text-slate-400">{s.phone}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">{s.year}</td>
+                        <td className="py-3 px-4">
+                          <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-xs">
+                            Sec {s.section}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
+                              isOverdue
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            }`}
+                          >
+                            {isOverdue && <AlertTriangle className="w-3 h-3 text-rose-600" />}
+                            {s.assignment_status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => onOpenStudentProfile(s.student_id)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View Profile</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
           )
         ) : (
           /* Completed Students Tab */
@@ -757,70 +828,136 @@ export function TaskTracker({
               </p>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-3 px-4">Roll Number</th>
-                  <th className="py-3 px-4">Student Name</th>
-                  <th className="py-3 px-4">Year</th>
-                  <th className="py-3 px-4">Section</th>
-                  <th className="py-3 px-4">Completed At</th>
-                  <th className="py-3 px-4">Submission / Proof</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+            <>
+              {/* Mobile Card View (< md) */}
+              <div className="md:hidden divide-y divide-slate-100">
                 {filteredCompleted.map((s) => (
-                  <tr key={s.student_id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                      {s.roll_number}
-                    </td>
-                    <td className="py-3 px-4 font-semibold text-slate-800">{s.name}</td>
-                    <td className="py-3 px-4 text-slate-600">{s.year}</td>
-                    <td className="py-3 px-4">
-                      <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-xs">
-                        Sec {s.section}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-xs text-slate-600">
-                      {formatDate(s.completed_at || s.submission_submitted_at)}
-                    </td>
-                    <td className="py-3 px-4">
-                      {s.submission_file_url ? (
-                        <a
-                          href={s.submission_file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span className="max-w-[140px] truncate">
-                            {s.submission_file_name || 'Proof Document'}
-                          </span>
-                          <Download className="w-3 h-3 text-blue-400" />
-                        </a>
-                      ) : s.submission_response ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          {s.submission_response}
+                  <div
+                    key={s.student_id}
+                    className="p-3.5 bg-white hover:bg-slate-50 flex items-start gap-3 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="font-mono font-black text-slate-900 text-sm tracking-tight">
+                          {s.roll_number}
                         </span>
-                      ) : (
-                        <span className="text-xs text-slate-400">Completed</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => onOpenStudentProfile(s.student_id)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Profile</span>
-                      </button>
-                    </td>
-                  </tr>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
+                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                          Done
+                        </span>
+                      </div>
+                      <div className="font-bold text-slate-800 text-xs mt-0.5 truncate">{s.name}</div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1 flex-wrap">
+                        <span className="font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+                          Sec {s.section}
+                        </span>
+                        <span>•</span>
+                        <span>{s.year}</span>
+                        <span>•</span>
+                        <span className="text-[10px] text-slate-400">
+                          {formatDate(s.completed_at || s.submission_submitted_at)}
+                        </span>
+                      </div>
+                      {/* Proof Document or Response */}
+                      <div className="mt-2">
+                        {s.submission_file_url ? (
+                          <a
+                            href={s.submission_file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60 max-w-full truncate"
+                          >
+                            <FileText className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{s.submission_file_name || 'Proof Document'}</span>
+                            <Download className="w-3 h-3 text-blue-400 shrink-0" />
+                          </a>
+                        ) : s.submission_response ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60 max-w-full truncate">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span className="truncate">{s.submission_response}</span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Completed</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onOpenStudentProfile(s.student_id)}
+                      className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 shrink-0 cursor-pointer"
+                      title="View Student Profile"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop Table (>= md) */}
+              <table className="hidden md:table w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <th className="py-3 px-4">Roll Number</th>
+                    <th className="py-3 px-4">Student Name</th>
+                    <th className="py-3 px-4">Year</th>
+                    <th className="py-3 px-4">Section</th>
+                    <th className="py-3 px-4">Completed At</th>
+                    <th className="py-3 px-4">Submission / Proof</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredCompleted.map((s) => (
+                    <tr key={s.student_id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                        {s.roll_number}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">{s.name}</td>
+                      <td className="py-3 px-4 text-slate-600">{s.year}</td>
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-xs">
+                          Sec {s.section}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-xs text-slate-600">
+                        {formatDate(s.completed_at || s.submission_submitted_at)}
+                      </td>
+                      <td className="py-3 px-4">
+                        {s.submission_file_url ? (
+                          <a
+                            href={s.submission_file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span className="max-w-[140px] truncate">
+                              {s.submission_file_name || 'Proof Document'}
+                            </span>
+                            <Download className="w-3 h-3 text-blue-400" />
+                          </a>
+                        ) : s.submission_response ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            {s.submission_response}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Completed</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => onOpenStudentProfile(s.student_id)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Profile</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )
         )}
       </div>

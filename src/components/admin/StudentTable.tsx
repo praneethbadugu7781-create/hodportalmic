@@ -311,39 +311,39 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
       {/* Table Header Controls */}
-      <div className="p-5 border-b border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="p-3.5 sm:p-5 border-b border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Student Directory</h2>
+          <h2 className="text-base sm:text-lg font-bold text-slate-900">Student Directory</h2>
           <p className="text-xs text-slate-500">
             Total {totalCount} registered students in department
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {selectedStudentIds.length > 0 && (
             <button
               onClick={() => setShowBulkDeleteModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl text-xs font-black transition-all shadow-xs cursor-pointer animate-in fade-in"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl text-xs font-black transition-all shadow-xs cursor-pointer animate-in fade-in"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete Selected ({selectedStudentIds.length})</span>
+              <span>Delete ({selectedStudentIds.length})</span>
             </button>
           )}
 
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Export CSV</span>
+            <span>CSV</span>
           </button>
 
           <button
             onClick={handleExportPDF}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-rose-400" />
-            <span>Export PDF</span>
+            <span>PDF</span>
           </button>
 
           <button
@@ -351,7 +351,7 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
               resetForm();
               setShowAddModal(true);
             }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
             <span>Add Student</span>
@@ -360,9 +360,9 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
       </div>
 
       {/* Filter Bar */}
-      <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="p-3 sm:p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
             placeholder="Search by roll number, name, email..."
@@ -375,14 +375,14 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
           <select
             value={yearFilter}
             onChange={(e) => {
               setYearFilter(e.target.value);
               setPage(1);
             }}
-            className="text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700"
+            className="flex-1 sm:flex-initial text-xs font-medium px-2.5 sm:px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700"
           >
             <option value="all">All Years</option>
             <option value="2nd Year">2nd Year</option>
@@ -396,7 +396,7 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
               setSectionFilter(e.target.value);
               setPage(1);
             }}
-            className="text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700"
+            className="flex-1 sm:flex-initial text-xs font-medium px-2.5 sm:px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700"
           >
             <option value="all">All Sections (A &amp; B)</option>
             <option value="A">Section A</option>
@@ -409,7 +409,7 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700"
+            className="flex-1 sm:flex-initial text-xs font-medium px-2.5 sm:px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700"
           >
             <option value="ACTIVE">Active Only</option>
             <option value="DISABLED">Disabled Only</option>
@@ -428,27 +428,9 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
             No students found matching current filters.
           </div>
         ) : (
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
-                <th className="py-3 px-4 w-10 text-center">
-                  <input
-                    type="checkbox"
-                    checked={students.length > 0 && students.every((s) => selectedStudentIds.includes(s.id))}
-                    onChange={handleSelectAllOnPage}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    title="Select all on this page"
-                  />
-                </th>
-                <th className="py-3 px-4">Roll Number</th>
-                <th className="py-3 px-4">Student Details</th>
-                <th className="py-3 px-4">Year & Section</th>
-                <th className="py-3 px-4">Tasks Status</th>
-                <th className="py-3 px-4">Account Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <>
+            {/* Mobile Card View (< md) */}
+            <div className="md:hidden divide-y divide-slate-100">
               {students.map((s) => {
                 const totalAssigned = s.total_assigned_tasks || 0;
                 const completed = s.completed_tasks_count || 0;
@@ -458,112 +440,227 @@ export function StudentTable({ onOpenStudentProfile, onRefreshStats }: StudentTa
                 const isSelected = selectedStudentIds.includes(s.id);
 
                 return (
-                  <tr
+                  <div
                     key={s.id}
-                    className={`transition-colors ${
-                      isSelected ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-slate-50/80'
+                    className={`p-3.5 flex items-start gap-3 transition-colors ${
+                      isSelected ? 'bg-blue-50/70' : 'bg-white hover:bg-slate-50'
                     }`}
                   >
-                    <td className="py-3 px-4 text-center">
+                    <div className="pt-0.5">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => handleToggleSelect(s.id)}
                         className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono font-black text-slate-900 bg-slate-100/90 border border-slate-200/80 px-2.5 py-1 rounded-md text-xs shadow-2xs">
-                        {s.roll_number}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-extrabold text-slate-900 text-sm font-display">{s.name}</div>
-                      <div className="text-xs text-slate-500 font-medium">{s.email}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-xs font-bold text-slate-800">{s.year}</div>
-                      <div className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-100 inline-block px-2 py-0.5 rounded-md mt-0.5">
-                        Sec {s.section}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="font-mono font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">
+                          {s.roll_number}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                            s.status === 'ACTIVE'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : s.status === 'DISABLED'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          }`}
+                        >
+                          {s.status}
+                        </span>
                       </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 bg-slate-100 h-2 rounded-full overflow-hidden">
-                          <div
-                            className="bg-emerald-500 h-2 rounded-full"
-                            style={{ width: `${rate}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-bold text-slate-800">{rate}%</span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 font-medium">
-                        <span className="text-emerald-600 font-bold">{completed} Done</span>
+                      <div className="font-bold text-slate-900 text-xs mt-1 truncate">{s.name}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{s.email}</div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                        <span className="font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
+                          Sec {s.section}
+                        </span>
                         <span>•</span>
-                        <span className="text-amber-600 font-bold">{pending + overdue} Pending</span>
+                        <span>{s.year}</span>
+                        <span>•</span>
+                        <span className="font-bold text-slate-700">{rate}% done</span>
                       </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                          s.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : s.status === 'DISABLED'
-                            ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        }`}
-                      >
-                        {s.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      {/* Action Row on Mobile */}
+                      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
                         <button
                           onClick={() => onOpenStudentProfile(s.id)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                          title="View Profile & History"
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Profile</span>
                         </button>
-
                         <button
                           onClick={() => openEdit(s)}
-                          className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                          title="Edit Student"
+                          className="p-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                          title="Edit"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
-
                         <button
                           onClick={() => handleToggleStatus(s)}
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             s.status === 'ACTIVE'
-                              ? 'text-amber-600 hover:bg-amber-50'
-                              : 'text-emerald-600 hover:bg-emerald-50'
+                              ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                              : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
                           }`}
                           title={s.status === 'ACTIVE' ? 'Disable Account' : 'Enable Account'}
                         >
-                          {s.status === 'ACTIVE' ? (
-                            <UserX className="w-4 h-4" />
-                          ) : (
-                            <UserCheck className="w-4 h-4" />
-                          )}
+                          {s.status === 'ACTIVE' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
                         </button>
-
                         <button
                           onClick={() => setStudentToDelete(s)}
-                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                          title="Permanently Delete Student"
+                          className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
+                          title="Delete"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Desktop Table (>= md) */}
+            <table className="hidden md:table w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                  <th className="py-3 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={students.length > 0 && students.every((s) => selectedStudentIds.includes(s.id))}
+                      onChange={handleSelectAllOnPage}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      title="Select all on this page"
+                    />
+                  </th>
+                  <th className="py-3 px-4">Roll Number</th>
+                  <th className="py-3 px-4">Student Details</th>
+                  <th className="py-3 px-4">Year &amp; Section</th>
+                  <th className="py-3 px-4">Tasks Status</th>
+                  <th className="py-3 px-4">Account Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {students.map((s) => {
+                  const totalAssigned = s.total_assigned_tasks || 0;
+                  const completed = s.completed_tasks_count || 0;
+                  const pending = s.pending_tasks_count || 0;
+                  const overdue = s.overdue_tasks_count || 0;
+                  const rate = totalAssigned > 0 ? Math.round((completed / totalAssigned) * 100) : 0;
+                  const isSelected = selectedStudentIds.includes(s.id);
+
+                  return (
+                    <tr
+                      key={s.id}
+                      className={`transition-colors ${
+                        isSelected ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-slate-50/80'
+                      }`}
+                    >
+                      <td className="py-3 px-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(s.id)}
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="font-mono font-black text-slate-900 bg-slate-100/90 border border-slate-200/80 px-2.5 py-1 rounded-md text-xs shadow-2xs">
+                          {s.roll_number}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-extrabold text-slate-900 text-sm font-display">{s.name}</div>
+                        <div className="text-xs text-slate-500 font-medium">{s.email}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-xs font-bold text-slate-800">{s.year}</div>
+                        <div className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-100 inline-block px-2 py-0.5 rounded-md mt-0.5">
+                          Sec {s.section}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div
+                              className="bg-emerald-500 h-2 rounded-full"
+                              style={{ width: `${rate}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800">{rate}%</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 font-medium">
+                          <span className="text-emerald-600 font-bold">{completed} Done</span>
+                          <span>•</span>
+                          <span className="text-amber-600 font-bold">{pending + overdue} Pending</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                            s.status === 'ACTIVE'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : s.status === 'DISABLED'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          }`}
+                        >
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => onOpenStudentProfile(s.id)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            title="View Profile & History"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => openEdit(s)}
+                            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            title="Edit Student"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => handleToggleStatus(s)}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              s.status === 'ACTIVE'
+                                ? 'text-amber-600 hover:bg-amber-50'
+                                : 'text-emerald-600 hover:bg-emerald-50'
+                            }`}
+                            title={s.status === 'ACTIVE' ? 'Disable Account' : 'Enable Account'}
+                          >
+                            {s.status === 'ACTIVE' ? (
+                              <UserX className="w-4 h-4" />
+                            ) : (
+                              <UserCheck className="w-4 h-4" />
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => setStudentToDelete(s)}
+                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Permanently Delete Student"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 

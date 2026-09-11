@@ -26,20 +26,22 @@ export function DashboardKpis({
 }: DashboardKpisProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs animate-pulse overflow-hidden relative"
+            className={`bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs animate-pulse overflow-hidden relative ${
+              i === 5 ? 'col-span-2 sm:col-span-1' : ''
+            }`}
           >
             <div className="flex items-center justify-between">
-              <div className="h-3 w-20 bg-slate-200 rounded-md" />
-              <div className="w-8 h-8 rounded-xl bg-slate-100" />
+              <div className="h-3 w-16 sm:w-20 bg-slate-200 rounded-md" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-100" />
             </div>
-            <div className="mt-4 h-8 w-16 bg-slate-200 rounded-md" />
-            <div className="mt-3 flex items-center justify-between">
-              <div className="h-2.5 w-24 bg-slate-100 rounded-md" />
-              <div className="h-4 w-14 bg-slate-100 rounded-full" />
+            <div className="mt-3 sm:mt-4 h-7 sm:h-8 w-14 sm:w-16 bg-slate-200 rounded-md" />
+            <div className="mt-2.5 sm:mt-3 flex items-center justify-between">
+              <div className="h-2.5 w-16 sm:w-24 bg-slate-100 rounded-md" />
+              <div className="h-3.5 sm:h-4 w-12 sm:w-14 bg-slate-100 rounded-full" />
             </div>
           </div>
         ))}
@@ -116,40 +118,42 @@ export function DashboardKpis({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
           <div
             key={card.id}
             onClick={() => onCardClick?.(card.id)}
-            className={`group relative bg-white rounded-2xl border p-5 transition-all duration-300 cursor-pointer shadow-xs hover:shadow-lg hover:-translate-y-1 overflow-hidden ${card.borderColor}`}
+            className={`group relative bg-white rounded-2xl border p-3.5 sm:p-5 transition-all duration-300 cursor-pointer shadow-xs hover:shadow-lg hover:-translate-y-1 overflow-hidden ${card.borderColor} ${
+              card.id === 'overdue' ? 'col-span-2 sm:col-span-1' : ''
+            }`}
           >
             {/* Ambient Background Gradient Glow */}
             <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-50 group-hover:opacity-100 transition-opacity`} />
 
             {/* Top Row: Label & Floating Icon */}
-            <div className="relative flex items-center justify-between z-10">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 group-hover:text-slate-900 transition-colors">
+            <div className="relative flex items-center justify-between gap-1 z-10">
+              <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 group-hover:text-slate-900 transition-colors truncate pr-1">
                 {card.label}
               </span>
-              <div className={`p-2 rounded-xl border transition-transform duration-300 group-hover:scale-110 shadow-2xs ${card.accentColor}`}>
-                <Icon className="w-4 h-4" />
+              <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border transition-transform duration-300 group-hover:scale-110 shadow-2xs shrink-0 ${card.accentColor}`}>
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
 
             {/* Main Value */}
-            <div className="relative mt-3 flex items-baseline justify-between z-10">
-              <span className="text-3xl font-black text-slate-900 tracking-tight">
+            <div className="relative mt-2 sm:mt-3 flex items-baseline justify-between z-10">
+              <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                 {card.value}
               </span>
-              <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-all -translate-x-1 group-hover:translate-x-0" />
+              <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 group-hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-all -translate-x-1 group-hover:translate-x-0" />
             </div>
 
             {/* Bottom Row: Subtext & Status Badge */}
-            <div className="relative mt-2.5 flex items-center justify-between text-xs z-10">
-              <span className="text-slate-500 font-medium text-[11px]">{card.subtext}</span>
-              <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border shadow-2xs ${card.badgeColor}`}>
+            <div className="relative mt-2 sm:mt-2.5 flex items-center justify-between text-xs z-10 gap-1">
+              <span className="text-slate-500 font-medium text-[10px] sm:text-[11px] truncate mr-1">{card.subtext}</span>
+              <span className={`px-1.5 sm:px-2 py-0.5 rounded-full font-bold text-[9px] sm:text-[10px] border shadow-2xs whitespace-nowrap shrink-0 ${card.badgeColor}`}>
                 {card.badge}
               </span>
             </div>
