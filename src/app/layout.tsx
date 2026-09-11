@@ -1,17 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import { Manrope } from 'next/font/google';
 import './globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  variable: '--font-jakarta',
+  variable: '--font-manrope',
   weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
 });
@@ -36,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
+    <html lang="en" className={manrope.variable}>
       <head>
         <link rel="icon" href="/logo-mic.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo-mic.png" />

@@ -9,9 +9,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'var(--font-jakarta)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        display: ['var(--font-jakarta)', 'var(--font-inter)', 'sans-serif'],
-        outfit: ['var(--font-jakarta)', 'var(--font-inter)', 'sans-serif'],
+        sans: ['var(--font-manrope)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        display: ['var(--font-manrope)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        outfit: ['var(--font-manrope)', 'sans-serif'],
       },
       colors: {
         background: "var(--background)",
