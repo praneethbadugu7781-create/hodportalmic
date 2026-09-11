@@ -89,27 +89,35 @@ export async function POST(req: NextRequest) {
     if (geminiKey && !file.name.endsWith('.pdf')) {
       try {
         const genAI = new GoogleGenerativeAI(geminiKey);
-        // Use gemini-1.5-flash which is fast, accurate, and multimodal
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        // Use active gemini-3.6-flash model with automatic fallback to gemini-flash-latest
+        const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
         const prompt = `
 You are an expert OCR timetable parser for DVR & Dr. HS MIC College of Technology (Department of Artificial Intelligence & Machine Learning).
 Analyze this timetable image and extract the class schedule into a STRICT JSON object with no markdown formatting or commentary.
 
+Instructions:
+1. Identify the Class / Semester header (e.g. 'III/V- A' or 'II/III- B').
+2. Look at the Course Table / Faculty Legend at the bottom of the sheet to expand abbreviations:
+   - e.g. DL -> 'Deep Learning', CN -> 'Computer Networks', OS -> 'Operating Systems', EDVC -> 'Entrepreneurship Development and Venture Creation', FSD-2 -> 'Full Stack Development -2', UI F LAB -> 'User Interface Design using Flutter Lab', PT-C -> 'P & T Coding', PT-V -> 'P & T Verbal Ability', MOOCS -> 'MOOCS - NPTEL', SEMINAR -> 'Technical Seminar'.
+   - Associate the corresponding Faculty Name and Course Code from the legend to each period.
+3. Mark multi-period lab sessions with is_lab: true.
+4. Extract the exact start_time and end_time (e.g. '09:00', '10:00', '11:10', '12:00', '13:40', '14:30', '15:20', '16:10').
+
 The JSON MUST match this exact schema:
 {
-  "semester": "string (e.g. 'II-I' or 'III-I' or 'IV-I')",
+  "semester": "string (e.g. 'III/V- A')",
   "days": [
     {
       "day": "Monday | Tuesday | Wednesday | Thursday | Friday | Saturday",
       "periods": [
         {
           "period_number": 1,
-          "start_time": "HH:MM (24h or 12h, e.g. 09:15)",
-          "end_time": "HH:MM (e.g. 10:05)",
-          "subject_name": "Full subject name or standard abbreviation",
-          "subject_code": "code if available",
-          "faculty_name": "Faculty name or initials",
+          "start_time": "HH:MM (e.g. 09:00)",
+          "end_time": "HH:MM (e.g. 10:00)",
+          "subject_name": "Full subject name (expanded from abbreviation)",
+          "subject_code": "code if available (e.g. 23AM5T01)",
+          "faculty_name": "Full faculty name from legend (e.g. Mrs. K. Nasaramma)",
           "room_number": "Room or Lab number if visible",
           "is_lab": boolean
         }
@@ -118,8 +126,8 @@ The JSON MUST match this exact schema:
   ]
 }
 
-Ensure all 6 days (Monday to Saturday) are represented.
-Return ONLY valid JSON.
+Ensure all days (Monday to Saturday) present in the timetable are included.
+Return ONLY valid JSON with no markdown wrapping.
 `;
 
         const mimeType = file.type || (ext === '.png' ? 'image/png' : 'image/jpeg');
@@ -130,7 +138,14 @@ Return ONLY valid JSON.
           },
         };
 
-        const result = await model.generateContent([prompt, imagePart]);
+        let result;
+        try {
+          result = await model.generateContent([prompt, imagePart]);
+        } catch {
+          const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+          result = await fallbackModel.generateContent([prompt, imagePart]);
+        }
+
         const responseText = result.response.text();
 
         // Strip code block fences if present
