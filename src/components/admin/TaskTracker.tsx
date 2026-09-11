@@ -18,11 +18,15 @@ import {
   Download,
   Share2,
   Trash2,
+  Archive,
 } from 'lucide-react';
 import { Task, TaskAssignment } from '@/lib/types';
 import { formatDate, formatFileSize, copyToClipboard } from '@/lib/utils';
 import { useToast } from '../ui/Toast';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { WhatsAppNoticeModal } from './WhatsAppNoticeModal';
+import { ZipDownloadModal } from './ZipDownloadModal';
+import { downloadSubmissionsZip } from '@/lib/zipExporter';
 
 interface TaskTrackerProps {
   tasks: Task[];
@@ -57,6 +61,11 @@ export function TaskTracker({
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderMessageText, setReminderMessageText] = useState('');
+  const [showWhatsAppNoticeModal, setShowWhatsAppNoticeModal] = useState(false);
+  const [isExportingZip, setIsExportingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState<any>(null);
+  const [isZipComplete, setIsZipComplete] = useState(false);
+  const [zipResult, setZipResult] = useState<any>(null);
 
   const activeTask = tasks.find((t) => t.id === selectedTaskId) || tasks[0];
 
@@ -123,6 +132,31 @@ export function TaskTracker({
 
   const completedList: any[] = taskData?.completed || [];
   const notCompletedList: any[] = taskData?.not_completed || [];
+
+  const handleDownloadZip = async () => {
+    if (!activeTask) return;
+    const withFiles = completedList.filter((s) => s.submission_file_url);
+    if (withFiles.length === 0) {
+      info('No student proof files have been uploaded yet for this task.');
+      return;
+    }
+    setIsExportingZip(true);
+    setIsZipComplete(false);
+    setZipResult(null);
+    try {
+      const res = await downloadSubmissionsZip(
+        activeTask.title,
+        completedList,
+        (prog) => setZipProgress(prog)
+      );
+      setZipResult(res);
+      setIsZipComplete(true);
+      success(`Successfully exported ${res.downloadedCount} submissions to ZIP!`);
+    } catch (err: any) {
+      error(err?.message || 'Failed to generate ZIP archive');
+      setIsExportingZip(false);
+    }
+  };
 
   // Filter students based on search and section
   const filterList = (list: any[]) => {
@@ -399,11 +433,18 @@ export function TaskTracker({
                     </button>
                     <div className="border-t border-slate-100 my-1"></div>
                     <button
-                      onClick={() => handleOpenReminderModal(false)}
-                      className="w-full text-left px-4 py-2 text-sm text-indigo-700 hover:bg-indigo-50 font-semibold flex items-center gap-2 cursor-pointer"
+                      onClick={() => setShowWhatsAppNoticeModal(true)}
+                      className="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 font-semibold flex items-center gap-2 cursor-pointer"
                     >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Copy Reminder Message</span>
+                      <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>WhatsApp Notice Broadcast</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenReminderModal(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 font-medium flex items-center gap-2 cursor-pointer"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Plain Text Template</span>
                     </button>
                   </div>
                 </div>
@@ -420,16 +461,32 @@ export function TaskTracker({
                 </button>
               )}
 
-              {/* Reminder composer modal trigger */}
+              {/* WhatsApp Broadcast Notice Modal Trigger */}
               <button
-                onClick={() => handleOpenReminderModal(false)}
-                className="flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm transition-colors cursor-pointer"
-                title="Compose reminder announcement"
+                onClick={() => setShowWhatsAppNoticeModal(true)}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer"
+                title="Broadcast segmented notice to WhatsApp"
               >
-                <Share2 className="w-4 h-4 text-slate-500" />
-                <span className="hidden sm:inline">Notice Template</span>
+                <Share2 className="w-4 h-4" />
+                <span className="hidden sm:inline">WhatsApp Notice</span>
               </button>
             </>
+          )}
+
+          {/* Download Submissions (.ZIP) */}
+          {(activeTask.type === 'FILE_SUBMISSION' || completedList.some((s) => s.submission_file_url)) && (
+            <button
+              onClick={handleDownloadZip}
+              disabled={isExportingZip}
+              className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              title="Download all submitted proof documents in a structured ZIP with CSV manifest"
+            >
+              <Archive className="w-4 h-4 text-indigo-600" />
+              <span className="hidden sm:inline">Download ZIP</span>
+              <span className="text-xs px-1.5 py-0.5 bg-indigo-200/60 rounded-md font-extrabold text-indigo-800">
+                {completedList.filter((s) => s.submission_file_url).length}
+              </span>
+            </button>
           )}
 
           {/* Export Task PDF Report */}
@@ -779,6 +836,24 @@ export function TaskTracker({
         isDeleting={isDeleting}
         onConfirm={handleDeleteActiveTask}
         onClose={() => setShowDeleteModal(false)}
+      />
+
+      {/* WhatsApp Department Notice Broadcast Modal */}
+      <WhatsAppNoticeModal
+        isOpen={showWhatsAppNoticeModal}
+        onClose={() => setShowWhatsAppNoticeModal(false)}
+        task={activeTask}
+        notCompletedStudents={notCompletedList}
+      />
+
+      {/* Submissions ZIP Exporter Modal */}
+      <ZipDownloadModal
+        isOpen={isExportingZip}
+        onClose={() => setIsExportingZip(false)}
+        progress={zipProgress}
+        isComplete={isZipComplete}
+        result={zipResult}
+        taskTitle={activeTask?.title || 'Task Submissions'}
       />
     </div>
   );
