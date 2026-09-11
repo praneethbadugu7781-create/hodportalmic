@@ -7,6 +7,9 @@ export interface IUser extends Document {
   password_hash: string;
   role: 'admin' | 'student';
   student_id?: mongoose.Types.ObjectId | null;
+  is_first_login?: boolean;
+  college_email?: string | null;
+  college_email_verified?: boolean;
   created_at: Date;
 }
 
@@ -16,6 +19,9 @@ const UserSchema = new Schema<IUser>({
   password_hash: { type: String, required: true },
   role: { type: String, enum: ['admin', 'student'], required: true },
   student_id: { type: Schema.Types.ObjectId, ref: 'Student', default: null },
+  is_first_login: { type: Boolean, default: true },
+  college_email: { type: String, default: null },
+  college_email_verified: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
 });
 
@@ -179,3 +185,29 @@ export const TaskAssignment: Model<ITaskAssignment> = mongoose.models.TaskAssign
 export const Submission: Model<ISubmission> = mongoose.models.Submission || mongoose.model<ISubmission>('Submission', SubmissionSchema);
 export const AcademicHistory: Model<IAcademicHistory> = mongoose.models.AcademicHistory || mongoose.model<IAcademicHistory>('AcademicHistory', AcademicHistorySchema);
 export const AuditLog: Model<IAuditLog> = mongoose.models.AuditLog || mongoose.model<IAuditLog>('AuditLog', AuditLogSchema);
+
+// OTP Verification Schema
+export interface IOtpVerification extends Document {
+  email: string;
+  otp: string;
+  user_id: mongoose.Types.ObjectId;
+  verified: boolean;
+  attempts: number;
+  expires_at: Date;
+  created_at: Date;
+}
+
+const OtpVerificationSchema = new Schema<IOtpVerification>({
+  email: { type: String, required: true, lowercase: true, trim: true, index: true },
+  otp: { type: String, required: true },
+  user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  verified: { type: Boolean, default: false },
+  attempts: { type: Number, default: 0 },
+  expires_at: { type: Date, required: true, index: true },
+  created_at: { type: Date, default: Date.now },
+});
+OtpVerificationSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
+
+export const OtpVerification: Model<IOtpVerification> =
+  mongoose.models.OtpVerification || mongoose.model<IOtpVerification>('OtpVerification', OtpVerificationSchema);
+

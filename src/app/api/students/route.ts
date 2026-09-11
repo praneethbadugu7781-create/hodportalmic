@@ -165,8 +165,8 @@ export async function POST(req: NextRequest) {
       updated_at: new Date(),
     });
 
-    // Create user login
-    const rawPass = password?.trim() || 'student123';
+    // Create user login - default password is student roll number with first-time setup required
+    const rawPass = password?.trim() || cleanRoll;
     const passHash = await hashPassword(rawPass);
     await User.create({
       email: email.trim().toLowerCase(),
@@ -174,6 +174,7 @@ export async function POST(req: NextRequest) {
       password_hash: passHash,
       role: 'student',
       student_id: student._id,
+      is_first_login: true,
       created_at: new Date(),
     });
 

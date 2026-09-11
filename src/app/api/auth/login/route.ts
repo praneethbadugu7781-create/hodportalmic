@@ -53,7 +53,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify password
-    const isMatch = await comparePassword(password, user.password_hash);
+    let isMatch = await comparePassword(password, user.password_hash);
+
+    // If student user has not yet changed password (is_first_login !== false),
+    // allow case-insensitive match against their roll number as default initial password
+    if (!isMatch && user.role === 'student' && user.is_first_login !== false) {
+      const cleanPass = String(password).trim().toUpperCase();
+      const rollUpper = user.username.trim().toUpperCase();
+      if (cleanPass === rollUpper) {
+        isMatch = true;
+      }
+    }
+
     if (!isMatch) {
       return NextResponse.json(
         { error: 'Invalid password. Please check your credentials.' },
@@ -91,6 +102,9 @@ export async function POST(req: NextRequest) {
         email: user.email,
         role: user.role,
         student_id: user.student_id?.toString() || null,
+        is_first_login: user.role === 'student' ? user.is_first_login !== false : false,
+        college_email_verified: !!user.college_email_verified,
+        college_email: user.college_email || null,
       },
       student: studentData ? { ...studentData, id: studentData._id.toString() } : null,
       role: user.role,

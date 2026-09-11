@@ -90,6 +90,9 @@ export async function getAuthenticatedUser(req?: NextRequest): Promise<{
         username: user.username,
         role: user.role,
         student_id: user.student_id?.toString() || null,
+        is_first_login: user.role === 'student' ? user.is_first_login !== false : false,
+        college_email_verified: !!user.college_email_verified,
+        college_email: user.college_email || null,
       },
       student: student
         ? {

@@ -4,7 +4,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    serverComponentsExternalPackages: ['mongoose', 'bcryptjs', 'pdfjs-dist'],
+    serverComponentsExternalPackages: ['mongoose', 'bcryptjs', 'pdfjs-dist', 'nodemailer'],
   },
 };
 

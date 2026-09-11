@@ -142,11 +142,23 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={role === 'admin' ? '••••••••' : 'Default: Roll Number (e.g. 24H71A6101)'}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
               />
             </div>
           </div>
+
+          {role === 'student' && (
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-xs text-emerald-900 space-y-1.5 shadow-xs">
+              <div className="font-bold flex items-center gap-1.5 text-emerald-800">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                First Time Logging In?
+              </div>
+              <p className="text-[11px] text-emerald-700 leading-relaxed">
+                Enter your <span className="font-semibold text-emerald-900">Roll Number</span> as both username and password. You will be prompted to verify your college email (<code className="bg-emerald-100/80 text-emerald-800 px-1 py-0.5 rounded font-mono text-[10px]">@mictech.edu.in</code>) with an OTP and set your personal password.
+              </p>
+            </div>
+          )}
 
           <button
             type="submit"

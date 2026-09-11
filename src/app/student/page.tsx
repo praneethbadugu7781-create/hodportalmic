@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { StudentDashboardView } from '@/components/student/StudentDashboardView';
+import { FirstTimeSetupModal } from '@/components/student/FirstTimeSetupModal';
 import { useToast } from '@/components/ui/Toast';
 
 export default function StudentPage() {
@@ -69,6 +70,15 @@ export default function StudentPage() {
       <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
         <span className="font-bold text-slate-700">DVR & Dr. HS MIC College of Technology</span> • Department of Artificial Intelligence & Machine Learning (AIML)
       </footer>
+
+      {user?.is_first_login && (
+        <FirstTimeSetupModal
+          student={student}
+          onComplete={() => {
+            checkAuth();
+          }}
+        />
+      )}
     </div>
   );
 }

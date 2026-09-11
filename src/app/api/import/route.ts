@@ -117,12 +117,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const defaultPasswordHash = await hashPassword('student123');
     const activeTasks = await Task.find({ status: 'ACTIVE' });
 
     for (const row of validRows) {
+      const rollNumber = row.roll_number.trim().toUpperCase();
       const student = await Student.create({
-        roll_number: row.roll_number,
+        roll_number: rollNumber,
         name: row.name,
         email: row.email,
         phone: row.phone,
@@ -135,12 +135,14 @@ export async function POST(req: NextRequest) {
         updated_at: new Date(),
       });
 
+      const rollPasswordHash = await hashPassword(rollNumber);
       await User.create({
         email: row.email,
-        username: row.roll_number,
-        password_hash: defaultPasswordHash,
+        username: rollNumber,
+        password_hash: rollPasswordHash,
         role: 'student',
         student_id: student._id,
+        is_first_login: true,
         created_at: new Date(),
       });
 
