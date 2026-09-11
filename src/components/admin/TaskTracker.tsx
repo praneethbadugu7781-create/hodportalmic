@@ -415,146 +415,168 @@ export function TaskTracker({
         </div>
       </div>
 
-      {/* Tabs & Top Actions Bar */}
-      <div className="p-3.5 sm:p-6 border-b border-slate-200 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4 bg-slate-50/60">
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-200/80 p-1 rounded-xl w-full lg:w-auto shrink-0">
-          <button
-            onClick={() => setActiveTab('not_completed')}
-            className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-              activeTab === 'not_completed'
-                ? 'bg-white text-rose-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 shrink-0" />
-            <span className="truncate">NOT COMPLETED ({pendingCount + overdueCount})</span>
-          </button>
+      {/* Tabs & Action Toolbar */}
+      <div className="p-3.5 sm:p-5 border-b border-slate-200 bg-slate-50/70 space-y-3">
+        {/* Tier 1: Tab Switcher & Status Info */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {/* Tab Switcher */}
+          <div className="flex items-center gap-1.5 bg-slate-200/90 p-1 rounded-xl w-full sm:w-auto">
+            <button
+              onClick={() => setActiveTab('not_completed')}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === 'not_completed'
+                  ? 'bg-white text-rose-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Clock className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>NOT COMPLETED ({pendingCount + overdueCount})</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('completed')}
-            className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-              activeTab === 'completed'
-                ? 'bg-white text-emerald-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
-            <span className="truncate">COMPLETED ({completedCount})</span>
-          </button>
+            <button
+              onClick={() => setActiveTab('completed')}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === 'completed'
+                  ? 'bg-white text-emerald-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>COMPLETED ({completedCount})</span>
+            </button>
+          </div>
+
+          {/* Quick Selection / Summary Pill */}
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            {selectedStudentIds.length > 0 ? (
+              <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg text-xs font-bold text-blue-700 animate-in fade-in">
+                <span>{selectedStudentIds.length} students selected</span>
+                <button
+                  onClick={handleClearSelection}
+                  className="text-[11px] underline hover:text-blue-900 cursor-pointer"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <span className="text-xs text-slate-500 font-medium">
+                Showing {activeTab === 'not_completed' ? notCompletedList.length : completedList.length} students
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Top Actions Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
-          {/* CROWN JEWEL ACTIONS: Copy Pending Roll Numbers */}
-          {activeTab === 'not_completed' && (
-            <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-              {/* Primary Copy Button Group */}
-              <div className="relative inline-flex rounded-xl shadow-xs flex-1 sm:flex-initial">
-                <button
-                  onClick={() => handleCopyPending('newline', false)}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-3 sm:px-4 py-2.5 rounded-l-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer"
-                >
-                  {copiedFormat === 'newline' ? <Check className="w-4 h-4 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
-                  <span className="truncate">COPY ROLLS ({notCompletedList.length})</span>
-                </button>
-
-                <div className="relative group">
+        {/* Tier 2: Dedicated Action Buttons Toolbar - Guaranteed 100% visible on all screens */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-slate-200">
+          {/* Left Actions: Copy & WhatsApp */}
+          <div className="flex flex-wrap items-center gap-2">
+            {activeTab === 'not_completed' && (
+              <>
+                {/* Primary Copy Button Group */}
+                <div className="relative inline-flex rounded-xl shadow-xs">
                   <button
-                    className="bg-blue-700 hover:bg-blue-800 text-white px-2.5 py-2.5 rounded-r-xl border-l border-blue-500 font-semibold text-sm transition-colors cursor-pointer"
-                    title="More copy formats"
+                    onClick={() => handleCopyPending('newline', false)}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-3.5 sm:px-4 py-2 rounded-l-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                   >
-                    <ChevronDown className="w-4 h-4" />
+                    {copiedFormat === 'newline' ? <Check className="w-4 h-4 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
+                    <span>COPY ROLLS ({notCompletedList.length})</span>
                   </button>
 
-                  <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 hidden group-hover:block z-30 animate-in fade-in duration-150">
-                    <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Copy Formats
+                  <div className="relative group">
+                    <button
+                      className="bg-blue-700 hover:bg-blue-800 text-white px-2.5 py-2 rounded-r-xl border-l border-blue-500 font-semibold text-sm transition-colors cursor-pointer"
+                      title="More copy formats"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+
+                    <div className="absolute left-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 hidden group-hover:block z-30 animate-in fade-in duration-150">
+                      <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        Copy Formats
+                      </div>
+                      <button
+                        onClick={() => handleCopyPending('newline', false)}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
+                      >
+                        <span>One per line (WhatsApp)</span>
+                        <span className="text-[11px] text-slate-400">6148\n6152</span>
+                      </button>
+                      <button
+                        onClick={() => handleCopyPending('comma', false)}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
+                      >
+                        <span>Comma-separated</span>
+                        <span className="text-[11px] text-slate-400">6148, 6152</span>
+                      </button>
+                      <button
+                        onClick={() => handleCopyPending('with_names', false)}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
+                      >
+                        <span>With Student Names</span>
+                        <span className="text-[11px] text-slate-400">6148 - Aarav</span>
+                      </button>
+                      <div className="border-t border-slate-100 my-1"></div>
+                      <button
+                        onClick={() => setShowWhatsAppNoticeModal(true)}
+                        className="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 font-semibold flex items-center gap-2 cursor-pointer"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>WhatsApp Notice Broadcast</span>
+                      </button>
+                      <button
+                        onClick={() => handleOpenReminderModal(false)}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 font-medium flex items-center gap-2 cursor-pointer"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Plain Text Template</span>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleCopyPending('newline', false)}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
-                    >
-                      <span>One per line (WhatsApp)</span>
-                      <span className="text-[11px] text-slate-400">6148\n6152</span>
-                    </button>
-                    <button
-                      onClick={() => handleCopyPending('comma', false)}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
-                    >
-                      <span>Comma-separated</span>
-                      <span className="text-[11px] text-slate-400">6148, 6152</span>
-                    </button>
-                    <button
-                      onClick={() => handleCopyPending('with_names', false)}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
-                    >
-                      <span>With Student Names</span>
-                      <span className="text-[11px] text-slate-400">6148 - Aarav</span>
-                    </button>
-                    <div className="border-t border-slate-100 my-1"></div>
-                    <button
-                      onClick={() => setShowWhatsAppNoticeModal(true)}
-                      className="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 font-semibold flex items-center gap-2 cursor-pointer"
-                    >
-                      <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>WhatsApp Notice Broadcast</span>
-                    </button>
-                    <button
-                      onClick={() => handleOpenReminderModal(false)}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 font-medium flex items-center gap-2 cursor-pointer"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Plain Text Template</span>
-                    </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Copy Selected if any checkbox is checked */}
-              {selectedStudentIds.length > 0 && (
+                {/* Copy Selected */}
+                {selectedStudentIds.length > 0 && (
+                  <button
+                    onClick={() => handleCopyPending('newline', true)}
+                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Copy {selectedStudentIds.length} Selected</span>
+                  </button>
+                )}
+
+                {/* WhatsApp Broadcast Notice Trigger */}
                 <button
-                  onClick={() => handleCopyPending('newline', true)}
-                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 sm:px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors animate-in fade-in cursor-pointer shrink-0"
+                  onClick={() => setShowWhatsAppNoticeModal(true)}
+                  className="flex items-center gap-1.5 bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] border border-[#25D366]/40 px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer"
+                  title="Broadcast circular to WhatsApp"
                 >
-                  <Check className="w-4 h-4" />
-                  <span className="hidden sm:inline">Copy</span> {selectedStudentIds.length} Sel
+                  <Share2 className="w-4 h-4 shrink-0 text-[#128C7E]" />
+                  <span>WhatsApp Notice</span>
                 </button>
-              )}
-            </div>
-          )}
-
-          {/* Action Buttons Row */}
-          <div className="flex items-center gap-1.5 sm:gap-2 justify-end flex-wrap sm:flex-nowrap">
-            {/* WhatsApp Broadcast Notice Modal Trigger */}
-            {activeTab === 'not_completed' && (
-              <button
-                onClick={() => setShowWhatsAppNoticeModal(true)}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-3 sm:px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer"
-                title="Broadcast segmented notice to WhatsApp"
-              >
-                <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                <span className="truncate">WhatsApp Notice</span>
-              </button>
+              </>
             )}
+          </div>
 
-            {/* Download Submissions (.ZIP) */}
+          {/* Right Actions: DOWNLOAD SUBMISSIONS (.ZIP) & EXPORT PDF REPORT & DELETE */}
+          <div className="flex flex-wrap items-center gap-2 ml-auto sm:ml-0">
+            {/* Download Submissions (.ZIP) Button */}
             {(activeTask.type === 'FILE_SUBMISSION' || completedList.some((s) => s.submission_file_url)) && (
               <button
                 onClick={handleDownloadZip}
                 disabled={isExportingZip}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 sm:px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-                title="Download all submitted proof documents in a structured ZIP with CSV manifest"
+                className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 border border-indigo-200 px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                title="Download all submitted student proof documents in a ZIP file"
               >
-                <Archive className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 shrink-0" />
-                <span className="hidden sm:inline">Download</span> ZIP
-                <span className="text-[10px] sm:text-xs px-1.5 py-0.5 bg-indigo-200/60 rounded-md font-extrabold text-indigo-800">
-                  {completedList.filter((s) => s.submission_file_url).length}
+                <Download className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>Download ZIP</span>
+                <span className="text-[10px] sm:text-xs px-1.5 py-0.5 bg-indigo-200/80 rounded-md font-extrabold text-indigo-900">
+                  {completedList.filter((s) => s.submission_file_url).length} files
                 </span>
               </button>
             )}
 
-            {/* Export Task PDF Report */}
+            {/* Export Task PDF Report Button */}
             <button
               onClick={async () => {
                 try {
@@ -565,21 +587,21 @@ export function TaskTracker({
                   error('Failed to export PDF');
                 }
               }}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3 sm:px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-2 bg-slate-900 hover:bg-black active:bg-slate-800 text-white px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer"
               title="Download formal MIC Compliance PDF Report"
             >
-              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 shrink-0" />
-              <span className="truncate">Export PDF</span>
+              <Download className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>Export PDF</span>
             </button>
 
             {/* Delete Task Button */}
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 px-2.5 sm:px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer"
               title="Delete this task permanently"
             >
-              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 shrink-0" />
-              <span className="hidden sm:inline">Delete</span>
+              <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Delete</span>
             </button>
           </div>
         </div>

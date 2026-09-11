@@ -61,7 +61,8 @@ export function Navbar({ user, student, currentSession = '2026-27', onRefresh, o
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="text-xs sm:text-base font-extrabold text-slate-900 font-display tracking-tight truncate leading-tight">
-                  <span className="hidden sm:inline">Department of Artificial Intelligence &amp; Machine Learning (AIML)</span>
+                  <span className="hidden xl:inline">Department of Artificial Intelligence &amp; Machine Learning (AIML)</span>
+                  <span className="hidden sm:inline xl:hidden">Department of AIML (AI &amp; Machine Learning)</span>
                   <span className="sm:hidden">AIML Department</span>
                 </span>
                 <span className="hidden md:inline-flex bg-blue-50 text-blue-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200/80 shrink-0">
