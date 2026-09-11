@@ -11,49 +11,37 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
-export default function LoginPage() {
+export default function StudentLoginPage() {
   const router = useRouter();
   const { success, error } = useToast();
-  const [role, setRole] = useState<'admin' | 'student'>('admin');
-  const [identifier, setIdentifier] = useState('admin@department.edu');
-  const [password, setPassword] = useState('admin123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const handleRoleToggle = (newRole: 'admin' | 'student') => {
-    setRole(newRole);
-    if (newRole === 'admin') {
-      setIdentifier('admin@department.edu');
-      setPassword('admin123');
-    } else {
-      setIdentifier('');
-      setPassword('');
-    }
-  };
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    setLoading(true);
+    if (!identifier.trim() || !password.trim()) {
+      error('Please enter both your roll number and password');
+      return;
+    }
 
+    setLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, password, role }),
+        body: JSON.stringify({ identifier: identifier.trim().toUpperCase(), password, role: 'student' }),
       });
 
       const data = await res.json();
       if (res.ok) {
         success(`Welcome, ${data.student?.name || data.user.username}!`);
-        if (data.role === 'admin') {
-          router.push('/admin');
-        } else {
-          router.push('/student');
-        }
+        router.push('/student');
       } else {
         error(data.error || 'Invalid credentials');
       }
     } catch {
-      error('An error occurred during authentication. Please check server and database connection.');
+      error('An error occurred during authentication. Please check network connection.');
     } finally {
       setLoading(false);
     }
@@ -78,56 +66,42 @@ export default function LoginPage() {
             Department of Artificial Intelligence &amp; Machine Learning (AIML)
           </h2>
           <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">
-            Student Task Tracking &amp; Department Management Portal
+            Student Task Tracking &amp; Academic Management Portal
           </p>
         </div>
       </div>
 
-      {/* Main Login Card */}
+      {/* Main Student Login Card */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-md w-full p-6 sm:p-8 space-y-6">
-        {/* Role Tab Selector */}
-        <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl">
-          <button
-            type="button"
-            onClick={() => handleRoleToggle('admin')}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              role === 'admin'
-                ? 'bg-white text-blue-700 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-blue-600" />
-            <span>Admin / Faculty</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleRoleToggle('student')}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              role === 'student'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <User className="w-4 h-4 text-emerald-600" />
-            <span>Student Portal</span>
-          </button>
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+              <User className="w-5 h-5" />
+            </span>
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">Student Sign In</h3>
+              <p className="text-[11px] text-slate-500 font-medium">Access your department tasks & submissions</p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100/80 text-emerald-800 uppercase tracking-wider">
+            Student
+          </span>
         </div>
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              {role === 'admin' ? 'Admin Email / Username' : 'Student Roll Number'}
+              Student Roll Number
             </label>
             <div className="relative">
               <input
                 type="text"
                 required
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder={role === 'admin' ? 'admin@department.edu' : 'e.g. 24H71A6101'}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
+                placeholder="e.g. 24H71A6101"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold tracking-wide uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
               />
             </div>
           </div>
@@ -142,34 +116,28 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={role === 'admin' ? '••••••••' : 'Default: Roll Number (e.g. 24H71A6101)'}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                placeholder="Default: Roll Number (e.g. 24H71A6101)"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
               />
             </div>
           </div>
 
-          {role === 'student' && (
-            <div className="p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-xs text-emerald-900 space-y-1.5 shadow-xs">
-              <div className="font-bold flex items-center gap-1.5 text-emerald-800">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                First Time Logging In?
-              </div>
-              <p className="text-[11px] text-emerald-700 leading-relaxed">
-                Enter your <span className="font-semibold text-emerald-900">Roll Number</span> as both username and password. You will be prompted to verify your official college email (<code className="bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded font-mono text-[10px]">@mictech.edu.in</code>) with an OTP and set your personal password.
-              </p>
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-xs text-emerald-900 space-y-1.5 shadow-xs">
+            <div className="font-bold flex items-center gap-1.5 text-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              First Time Logging In?
             </div>
-          )}
+            <p className="text-[11px] text-emerald-700 leading-relaxed">
+              Enter your <span className="font-semibold text-emerald-900">Roll Number</span> as both username and password. You will be prompted to verify your official college email (<code className="bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded font-mono text-[10px]">@mictech.edu.in</code>) with an OTP and set your personal password.
+            </p>
+          </div>
 
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3 rounded-xl font-bold text-sm text-white transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
-              role === 'admin'
-                ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-500/20'
-                : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-500/20'
-            }`}
+            className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-500/20 disabled:opacity-60"
           >
-            <span>{loading ? 'Authenticating...' : `Sign In as ${role === 'admin' ? 'Admin' : 'Student'}`}</span>
+            <span>{loading ? 'Authenticating...' : 'Sign In to Student Portal'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>

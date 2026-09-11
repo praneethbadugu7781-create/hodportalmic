@@ -75,8 +75,13 @@ export default function AdminDashboardPage() {
       const meRes = await fetch('/api/auth/me');
       const meData = await meRes.json();
 
-      if (!meRes.ok || !meData.authenticated || meData.user?.role !== 'admin') {
-        router.push('/');
+      if (!meRes.ok || !meData.authenticated) {
+        router.push('/faculty');
+        return;
+      }
+
+      if (meData.user?.role !== 'admin') {
+        router.push('/student');
         return;
       }
 
