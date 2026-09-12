@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { TaskType, TaskPriority, TargetType, AcademicYear, Section, TargetSection } from '@/lib/types';
+import { formatDate, formatForDateTimeLocal, parseTaskDeadline } from '@/lib/utils';
 import { useToast } from '../ui/Toast';
 
 interface TaskCreateModalProps {
@@ -46,11 +47,11 @@ export function TaskCreateModal({ isOpen, onClose, onTaskCreated }: TaskCreateMo
   useEffect(() => {
     if (isOpen) {
       calculateTargetCount();
-      // Set default deadline to 7 days from today
+      // Set default deadline to 7 days from today at 23:59 IST
       const d = new Date();
       d.setDate(d.getDate() + 7);
       d.setHours(23, 59, 0, 0);
-      setDeadline(d.toISOString().slice(0, 16));
+      setDeadline(formatForDateTimeLocal(d));
     }
   }, [isOpen, targetType, targetYear, targetSection]);
 
@@ -106,7 +107,7 @@ export function TaskCreateModal({ isOpen, onClose, onTaskCreated }: TaskCreateMo
         instructions,
         type,
         external_link: type === 'LINK_CONFIRMATION' ? externalLink : null,
-        deadline,
+        deadline: parseTaskDeadline(deadline).toISOString(),
         priority,
         required: required ? 1 : 0,
         target_type: targetType,
@@ -471,8 +472,16 @@ export function TaskCreateModal({ isOpen, onClose, onTaskCreated }: TaskCreateMo
                   required
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-medium"
                 />
+                <div className="mt-2 p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/70 flex items-center justify-between text-xs">
+                  <span className="font-extrabold text-blue-800 flex items-center gap-1.5">
+                    <span>🇮🇳</span> Indian Standard Time (IST)
+                  </span>
+                  <span className="font-black text-slate-900">
+                    {deadline ? formatDate(parseTaskDeadline(deadline)) : 'Select timing'}
+                  </span>
+                </div>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
@@ -507,8 +516,10 @@ export function TaskCreateModal({ isOpen, onClose, onTaskCreated }: TaskCreateMo
                 </div>
 
                 <div className="p-3 rounded-xl border border-slate-200">
-                  <span className="text-slate-400 font-bold block mb-0.5">DEADLINE</span>
-                  <span className="font-bold text-slate-800">{deadline}</span>
+                  <span className="text-slate-400 font-bold block mb-0.5">DEADLINE (IST)</span>
+                  <span className="font-bold text-blue-900">
+                    {deadline ? formatDate(parseTaskDeadline(deadline)) : 'N/A'}
+                  </span>
                 </div>
               </div>
 

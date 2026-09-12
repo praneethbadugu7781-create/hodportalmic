@@ -3,6 +3,7 @@ import { connectToDatabase, logAdminAction } from '@/lib/mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Task, Student, TaskAssignment, Submission } from '@/lib/models';
 import { getCached, setCached, invalidateCache } from '@/lib/cache';
+import { parseTaskDeadline } from '@/lib/utils';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest) {
       instructions: instructions?.trim() || null,
       type,
       external_link: external_link?.trim() || null,
-      deadline: new Date(deadline),
+      deadline: parseTaskDeadline(deadline),
       priority,
       required: required ? 1 : 0,
       target_type,

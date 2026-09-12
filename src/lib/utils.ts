@@ -11,11 +11,13 @@ export function formatDate(dateString?: string | Date | null): string {
     const d = typeof dateString === 'string' ? new Date(dateString) : dateString;
     if (isNaN(d.getTime())) return String(dateString);
     return d.toLocaleDateString('en-US', {
+      timeZone: 'Asia/Kolkata',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: true,
     });
   } catch {
     return String(dateString);
@@ -28,6 +30,7 @@ export function formatDateShort(dateString?: string | Date | null): string {
     const d = typeof dateString === 'string' ? new Date(dateString) : dateString;
     if (isNaN(d.getTime())) return String(dateString);
     return d.toLocaleDateString('en-US', {
+      timeZone: 'Asia/Kolkata',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -35,6 +38,48 @@ export function formatDateShort(dateString?: string | Date | null): string {
   } catch {
     return String(dateString);
   }
+}
+
+/**
+ * Formats a Date or ISO string into YYYY-MM-DDTHH:mm in Indian Standard Time (IST)
+ * for use in HTML <input type="datetime-local" />
+ */
+export function formatForDateTimeLocal(dateInput?: Date | string | null): string {
+  const date = dateInput ? (typeof dateInput === 'string' ? new Date(dateInput) : dateInput) : new Date();
+  if (isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+
+  const partMap: Record<string, string> = {};
+  for (const p of parts) {
+    partMap[p.type] = p.value;
+  }
+  const hour = partMap.hour === '24' ? '00' : partMap.hour;
+  return `${partMap.year}-${partMap.month}-${partMap.day}T${hour}:${partMap.minute}`;
+}
+
+/**
+ * Parses user-submitted deadline into a Date object.
+ * If input is a raw datetime-local string (e.g. "2026-09-13T09:00"),
+ * it interprets it in Indian Standard Time (IST, UTC+05:30) so timings never drift.
+ */
+export function parseTaskDeadline(input: string | Date | null | undefined): Date {
+  if (!input) return new Date();
+  if (input instanceof Date) return input;
+  const str = String(input).trim();
+  if (str.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(str)) {
+    return new Date(str);
+  }
+  const withSecondsAndTz = str.length === 16 ? `${str}:00+05:30` : `${str}+05:30`;
+  const parsed = new Date(withSecondsAndTz);
+  return isNaN(parsed.getTime()) ? new Date(str) : parsed;
 }
 
 export function formatFileSize(bytes?: number | null): string {

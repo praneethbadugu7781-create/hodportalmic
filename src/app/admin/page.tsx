@@ -9,6 +9,7 @@ import { TaskTracker } from '@/components/admin/TaskTracker';
 import { StudentTable } from '@/components/admin/StudentTable';
 import { AnalyticsView } from '@/components/admin/AnalyticsView';
 import { TaskCreateModal } from '@/components/admin/TaskCreateModal';
+import { TaskEditModal } from '@/components/admin/TaskEditModal';
 import { BulkImportModal } from '@/components/admin/BulkImportModal';
 import { PromotionModal } from '@/components/admin/PromotionModal';
 import { StudentProfileModal } from '@/components/admin/StudentProfileModal';
@@ -18,7 +19,7 @@ import { AnnouncementManager } from '@/components/admin/AnnouncementManager';
 import { TimetableManager } from '@/components/admin/TimetableManager';
 import { Task } from '@/lib/types';
 import { useToast } from '@/components/ui/Toast';
-import { PlusCircle, Search, Filter, Archive, CheckCircle2, Clock, AlertTriangle, Eye, Trash2 } from 'lucide-react';
+import { PlusCircle, Search, Filter, Archive, CheckCircle2, Clock, AlertTriangle, Eye, Trash2, Edit2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 export default function AdminDashboardPage() {
@@ -36,6 +37,7 @@ export default function AdminDashboardPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
 
   // Modals
@@ -358,6 +360,9 @@ export default function AdminDashboardPage() {
                   setSelectedTaskId(null);
                   Promise.all([fetchTasks(true), fetchStats()]);
                 }}
+                onTaskUpdated={() => {
+                  Promise.all([fetchTasks(true), fetchStats()]);
+                }}
               />
             </div>
           )}
@@ -435,14 +440,25 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => setTaskToDelete(task)}
-                        className="flex items-center gap-1.5 px-3 py-2 text-rose-600 hover:text-rose-800 hover:bg-rose-50 text-xs font-bold rounded-xl transition-colors cursor-pointer border border-rose-200/80 hover:border-rose-300"
-                        title="Delete Task"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setTaskToEdit(task)}
+                          className="flex items-center gap-1.5 px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 text-xs font-bold rounded-xl transition-colors cursor-pointer border border-blue-200/80 hover:border-blue-300"
+                          title="Edit Task & Timing"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          onClick={() => setTaskToDelete(task)}
+                          className="flex items-center gap-1.5 px-3 py-2 text-rose-600 hover:text-rose-800 hover:bg-rose-50 text-xs font-bold rounded-xl transition-colors cursor-pointer border border-rose-200/80 hover:border-rose-300"
+                          title="Delete Task"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
 
                       <button
                         onClick={() => {
@@ -562,6 +578,16 @@ export default function AdminDashboardPage() {
         onStudentDeleted={() => {
           fetchStats();
           fetchTasks();
+        }}
+      />
+
+      <TaskEditModal
+        isOpen={!!taskToEdit}
+        onClose={() => setTaskToEdit(null)}
+        task={taskToEdit}
+        onTaskUpdated={() => {
+          fetchTasks(true);
+          fetchStats();
         }}
       />
 

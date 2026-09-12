@@ -19,11 +19,13 @@ import {
   Share2,
   Trash2,
   Archive,
+  Edit2,
 } from 'lucide-react';
 import { Task, TaskAssignment } from '@/lib/types';
 import { formatDate, formatFileSize, copyToClipboard } from '@/lib/utils';
 import { useToast } from '../ui/Toast';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { TaskEditModal } from './TaskEditModal';
 import { WhatsAppNoticeModal } from './WhatsAppNoticeModal';
 import { ZipDownloadModal } from './ZipDownloadModal';
 import { downloadSubmissionsZip } from '@/lib/zipExporter';
@@ -35,6 +37,7 @@ interface TaskTrackerProps {
   onSelectTask: (taskId: number) => void;
   onOpenStudentProfile: (studentId: number) => void;
   onTaskDeleted?: () => void;
+  onTaskUpdated?: () => void;
 }
 
 export function TaskTracker({
@@ -44,11 +47,13 @@ export function TaskTracker({
   onSelectTask,
   onOpenStudentProfile,
   onTaskDeleted,
+  onTaskUpdated,
 }: TaskTrackerProps) {
   const { success, error, info } = useToast();
   const [activeTab, setActiveTab] = useState<'not_completed' | 'completed'>('not_completed');
   const [taskData, setTaskData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [taskCache, setTaskCache] = useState<Record<number, any>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -392,8 +397,16 @@ export function TaskTracker({
 
           {/* Quick Metrics & Deadline */}
           <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-xs text-slate-500 font-medium">
-              Deadline: <span className="font-bold text-slate-800">{formatDate(activeTask.deadline)}</span>
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <span>Deadline: <span className="font-bold text-slate-800">{formatDate(activeTask.deadline)}</span></span>
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-blue-200/60"
+                title="Edit Task & Timing"
+              >
+                <Edit2 className="w-3 h-3" />
+                <span>Edit</span>
+              </button>
             </div>
             <div className="w-full sm:w-48 lg:w-56 space-y-1.5">
               <div className="flex justify-between text-xs font-bold">
@@ -1044,6 +1057,17 @@ export function TaskTracker({
           </div>
         </div>
       )}
+
+      {/* Edit Task & Timing Modal */}
+      <TaskEditModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        task={activeTask}
+        onTaskUpdated={() => {
+          fetchTaskDetails(activeTask.id, false);
+          if (onTaskUpdated) onTaskUpdated();
+        }}
+      />
 
       {/* Confirm Delete Task Modal */}
       <ConfirmDeleteModal

@@ -3,6 +3,7 @@ import { connectToDatabase, logAdminAction } from '@/lib/mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Task, Student, TaskAssignment, Submission } from '@/lib/models';
 import { getCached, setCached, invalidateCache } from '@/lib/cache';
+import { parseTaskDeadline } from '@/lib/utils';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -208,7 +209,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (description) task.description = description.trim();
     if (instructions !== undefined) task.instructions = instructions?.trim() || null;
     if (external_link !== undefined) task.external_link = external_link?.trim() || null;
-    if (deadline) task.deadline = new Date(deadline);
+    if (deadline) task.deadline = parseTaskDeadline(deadline);
     if (priority) task.priority = priority;
     if (status) task.status = status;
     task.updated_at = new Date();
